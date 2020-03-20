@@ -1,7 +1,7 @@
-Binaries
-Build
-Intermediate
-Mods
-Plugins
-Saved
-Source
+*
+!*/
+!Content/AreaActions/*
+!FactoryGame.uproject
+!LICENSE
+!README.md
+!Content/FactoryGame/-Shared/Crate/*
