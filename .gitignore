@@ -1,6 +1,7 @@
 *
 !*/
-!Content/AreaActions/*
+!Content/AreaActions/**/*
+!Source/AreaActions/**/*
 !FactoryGame.uproject
 !LICENSE
 !README.md

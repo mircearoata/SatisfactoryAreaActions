@@ -17,7 +17,11 @@
 		{
 			"Name": "AreaActions",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"FactoryGame",
+				"Engine"
+			]
 		}
 	],
 	"Plugins": [
