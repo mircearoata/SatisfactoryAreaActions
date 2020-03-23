@@ -7,6 +7,7 @@
 #include "AAHeightIndicator.h"
 #include "CoreMinimal.h"
 #include "Equipment/FGEquipment.h"
+#include "FGInteractWidget.h"
 #include "AAEquipment.generated.h"
 
 UENUM()
@@ -39,6 +40,12 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetSelectionMode(EAASelectionMode mode) { this->mSelectionMode = mode; }
 
+	UFUNCTION(BlueprintCallable)
+	void SelectMap();
+
+	UFUNCTION(BlueprintCallable)
+	void ClearSelection();
+
 private:
 	bool RaycastMouseWithRange(FHitResult & out_hitResult, bool ignoreCornerIndicators = false, bool ignoreWallIndicators = false, bool ignoreHeightIndicators = false, TArray<AActor*> otherIgnoredActors = TArray<AActor*>());
 
@@ -66,7 +73,9 @@ private:
 	
 	UPROPERTY(EditDefaultsOnly)
 	float MaxZ = 450000.0;
-
+	
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UFGInteractWidget> MainWidgetClass;
 private:
 	TArray<FVector> mAreaCorners;
 	float mAreaMinZ;

@@ -3,6 +3,8 @@
 
 #include "AAEquipment.h"
 #include "SML/util/Logging.h"
+#include "FGHUD.h"
+#include "UI/FGGameUI.h"
 
 AAAEquipment::AAAEquipment() : Super() {
 	this->mSelectionMode = SM_CORNER;
@@ -15,6 +17,7 @@ void AAAEquipment::BeginPlay() {
 	this->mBottomIndicator->SetIndicatorType(HIT_BOTTOM);
 	this->mTopIndicator = GetWorld()->SpawnActor<AAAHeightIndicator>(HeightIndicatorClass, FVector(0, 0, this->mAreaMaxZ), FRotator::ZeroRotator);
 	this->mTopIndicator->SetIndicatorType(HIT_TOP);
+	this->UpdateHeight();
 }
 
 void AAAEquipment::PrimaryFire() {
@@ -75,7 +78,24 @@ void AAAEquipment::PrimaryFire() {
 }
 
 void AAAEquipment::SecondaryFire() {
-	SML::Logging::info("Secondary Fire");
+}
+
+void AAAEquipment::SelectMap() {
+	this->ClearSelection();
+	this->AddCorner(FVector(-350000.0, -350000.0, 0));
+	this->AddCorner(FVector(450000.0, -350000.0, 0));
+	this->AddCorner(FVector(450000.0, 450000.0, 0));
+	this->AddCorner(FVector(-350000.0, 450000.0, 0));
+	this->UpdateHeight();
+}
+
+void AAAEquipment::ClearSelection() {
+	for (int i = this->mAreaCorners.Num() - 1; i >= 0; i--) {
+		this->RemoveCorner(i);
+	}
+	this->mAreaMinZ = MinZ;
+	this->mAreaMaxZ = MaxZ;
+	this->UpdateHeight();
 }
 
 void AAAEquipment::UpdateHeight() {
@@ -131,34 +151,23 @@ void AAAEquipment::RemoveCorner(int cornerIdx) {
 	AAACornerIndicator* corner = this->mCornerIndicators[cornerIdx];
 	this->mCornerIndicators.RemoveAt(cornerIdx);
 	corner->Destroy();
-	FVector initial = this->mAreaCorners[cornerIdx];
-	int initialSize = this->mAreaCorners.Num();
 	this->mAreaCorners.RemoveAt(cornerIdx);
 	
 	if (this->mWallIndicators.Num() > 0) {
-		AAAWallIndicator* wall = this->mWallIndicators[cornerIdx];
-		this->mWallIndicators.RemoveAt(cornerIdx);
+		AAAWallIndicator* wall = this->mWallIndicators[cornerIdx % this->mWallIndicators.Num()];
+		this->mWallIndicators.RemoveAt(cornerIdx % this->mWallIndicators.Num());
 		wall->Destroy();
 	}
 	if (this->mWallIndicators.Num() > 0) {
-		if (cornerIdx == 0) {
-			AAAWallIndicator* wall2 = this->mWallIndicators[this->mWallIndicators.Num() - 1];
-			this->mWallIndicators.RemoveAt(this->mWallIndicators.Num() - 1);
-			wall2->Destroy();
-		}
-		else {
-			AAAWallIndicator* wall2 = this->mWallIndicators[cornerIdx - 1];
-			this->mWallIndicators.RemoveAt(cornerIdx - 1);
-			wall2->Destroy();
-		}
+		AAAWallIndicator* wall = this->mWallIndicators[(cornerIdx - 1 + this->mWallIndicators.Num()) % this->mWallIndicators.Num()];
+		this->mWallIndicators.RemoveAt((cornerIdx - 1 + this->mWallIndicators.Num()) % this->mWallIndicators.Num());
+		wall->Destroy();
 	}
 	if (this->mAreaCorners.Num() > 2) {
-		if (cornerIdx == 0) {
-			this->mWallIndicators.Add(CreateWallIndicator(this->mAreaCorners[this->mAreaCorners.Num() - 1], this->mAreaCorners[cornerIdx]));
-		}
-		else {
-			this->mWallIndicators.Insert(CreateWallIndicator(this->mAreaCorners[cornerIdx - 1], this->mAreaCorners[cornerIdx % this->mAreaCorners.Num()]), cornerIdx - 1);
-		}
+		this->mWallIndicators.Insert(CreateWallIndicator(
+				this->mAreaCorners[(cornerIdx - 1 + this->mAreaCorners.Num()) % this->mAreaCorners.Num()],
+				this->mAreaCorners[cornerIdx % this->mAreaCorners.Num()]),
+			(cornerIdx - 1 + this->mAreaCorners.Num()) % this->mAreaCorners.Num());
 	}
 }
 
