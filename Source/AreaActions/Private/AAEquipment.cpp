@@ -5,22 +5,72 @@
 #include "SML/util/Logging.h"
 
 AAAEquipment::AAAEquipment() : Super() {
+	this->mSelectionMode = SM_CORNER;
 	this->mAreaMinZ = MinZ;
 	this->mAreaMaxZ = MaxZ;
 }
 
-__declspec(noinline) void AAAEquipment::PrimaryFire() {
+void AAAEquipment::BeginPlay() {
+	this->mBottomIndicator = GetWorld()->SpawnActor<AAAHeightIndicator>(HeightIndicatorClass, FVector(0, 0, this->mAreaMinZ), FRotator::ZeroRotator);
+	this->mBottomIndicator->SetIndicatorType(HIT_BOTTOM);
+	this->mTopIndicator = GetWorld()->SpawnActor<AAAHeightIndicator>(HeightIndicatorClass, FVector(0, 0, this->mAreaMaxZ), FRotator::ZeroRotator);
+	this->mTopIndicator->SetIndicatorType(HIT_TOP);
+}
+
+void AAAEquipment::PrimaryFire() {
 	FHitResult hitResult;
-	bool hit = RaycastMouseWithRange(hitResult, false, true, true);
-	if (hit) {
-		if (hitResult.Actor->IsA<AAACornerIndicator>()) {
-			AAACornerIndicator* hitCorner = (AAACornerIndicator*)hitResult.Actor.Get();
-			int cornerIdx = mCornerIndicators.Find(hitCorner);
-			this->RemoveCorner(cornerIdx);
+	switch (this->mSelectionMode) {
+	case SM_CORNER:
+		if (RaycastMouseWithRange(hitResult, false, true, true)) {
+			if (hitResult.Actor->IsA<AAACornerIndicator>()) {
+				AAACornerIndicator* hitCorner = (AAACornerIndicator*)hitResult.Actor.Get();
+				int cornerIdx = mCornerIndicators.Find(hitCorner);
+				this->RemoveCorner(cornerIdx);
+			}
+			else {
+				this->AddCorner(hitResult.Location);
+			}
 		}
-		else {
-			this->AddCorner(hitResult.Location);
+		break;
+	case SM_BOTTOM:
+		if (RaycastMouseWithRange(hitResult, false, true, false)) {
+			if (hitResult.Actor == this->mBottomIndicator) {
+				this->mAreaMinZ = MinZ;
+			}
+			else {
+				this->mAreaMinZ = hitResult.Location.Z;
+				if (this->mAreaMaxZ < this->mAreaMinZ) {
+					float tmp = this->mAreaMinZ;
+					this->mAreaMinZ = this->mAreaMaxZ;
+					this->mAreaMaxZ = tmp;
+				}
+			}
+			this->UpdateHeight();
 		}
+		break;
+	case SM_TOP:
+		if (RaycastMouseWithRange(hitResult, false, true, false)) {
+			if (hitResult.Actor == this->mTopIndicator) {
+				this->mAreaMaxZ = MaxZ;
+			}
+			else {
+				this->mAreaMaxZ = hitResult.Location.Z;
+				if (this->mAreaMaxZ < this->mAreaMinZ) {
+					float tmp = this->mAreaMinZ;
+					this->mAreaMinZ = this->mAreaMaxZ;
+					this->mAreaMaxZ = tmp;
+				}
+			}
+			this->UpdateHeight();
+		}
+		break;
+	case SM_BUILDING:
+		if (RaycastMouseWithRange(hitResult, true, true, true)) {
+
+		}
+		break;
+	default:
+		break;
 	}
 }
 
@@ -28,7 +78,20 @@ void AAAEquipment::SecondaryFire() {
 	SML::Logging::info("Secondary Fire");
 }
 
-__declspec(noinline) AAAWallIndicator* AAAEquipment::CreateWallIndicator(FVector from, FVector to) {
+void AAAEquipment::UpdateHeight() {
+	for (AAACornerIndicator* indicator : this->mCornerIndicators) {
+		indicator->UpdateHeight(this->mAreaMinZ, this->mAreaMaxZ);
+	}
+	for (AAAWallIndicator* indicator : this->mWallIndicators) {
+		indicator->UpdateHeight(this->mAreaMinZ, this->mAreaMaxZ);
+	}
+	this->mBottomIndicator->UpdateHeight(this->mAreaMinZ, this->mAreaMaxZ);
+	this->mBottomIndicator->SetActorHiddenInGame(this->mAreaMinZ == MinZ);
+	this->mTopIndicator->UpdateHeight(this->mAreaMinZ, this->mAreaMaxZ);
+	this->mTopIndicator->SetActorHiddenInGame(this->mAreaMaxZ == MaxZ);
+}
+
+AAAWallIndicator* AAAEquipment::CreateWallIndicator(FVector from, FVector to) {
 	FVector middle = (from + to) / 2;
 	float length = FVector::Dist(from, to);
 	float rotation = (to - from).Rotation().Yaw;
@@ -39,13 +102,13 @@ __declspec(noinline) AAAWallIndicator* AAAEquipment::CreateWallIndicator(FVector
 	return indicator;
 }
 
-__declspec(noinline) AAACornerIndicator* AAAEquipment::CreateCornerIndicator(FVector location) {
+AAACornerIndicator* AAAEquipment::CreateCornerIndicator(FVector location) {
 	AAACornerIndicator* indicator = GetWorld()->SpawnActor<AAACornerIndicator>(CornerIndicatorClass, location, FRotator::ZeroRotator);
 	indicator->UpdateHeight(this->mAreaMinZ, this->mAreaMaxZ);
 	return indicator;
 }
 
-__declspec(noinline) void AAAEquipment::AddCorner(FVector location) {
+void AAAEquipment::AddCorner(FVector location) {
 	if(this->mWallIndicators.Num() > 1) {
 		AAAWallIndicator* wall2 = this->mWallIndicators[this->mWallIndicators.Num() - 1];
 		this->mWallIndicators.RemoveAt(this->mWallIndicators.Num() - 1);
@@ -64,7 +127,7 @@ __declspec(noinline) void AAAEquipment::AddCorner(FVector location) {
 	this->mAreaCorners.Add(location);
 }
 
-__declspec(noinline) void AAAEquipment::RemoveCorner(int cornerIdx) {
+void AAAEquipment::RemoveCorner(int cornerIdx) {
 	AAACornerIndicator* corner = this->mCornerIndicators[cornerIdx];
 	this->mCornerIndicators.RemoveAt(cornerIdx);
 	corner->Destroy();
@@ -99,7 +162,7 @@ __declspec(noinline) void AAAEquipment::RemoveCorner(int cornerIdx) {
 	}
 }
 
-__declspec(noinline) bool AAAEquipment::RaycastMouseWithRange(FHitResult& out_hitResult, bool ignoreCornerIndicators, bool ignoreWallIndicators, bool ignoreHeightIndicators, TArray<AActor*> otherIgnoredActors) {
+bool AAAEquipment::RaycastMouseWithRange(FHitResult& out_hitResult, bool ignoreCornerIndicators, bool ignoreWallIndicators, bool ignoreHeightIndicators, TArray<AActor*> otherIgnoredActors) {
 	TArray<AActor*> ignoredActors;
 
 	if (ignoreCornerIndicators) {

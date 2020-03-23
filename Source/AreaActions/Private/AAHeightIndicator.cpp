@@ -5,10 +5,10 @@
 
 void AAAHeightIndicator::UpdateHeight(float minHeight, float maxHeight) {
 	FVector newLocation = this->GetActorLocation();
-	if (this->mIndicatorType == EAAHeightIndicatorType::TOP) {
+	if (this->mIndicatorType == HIT_TOP) {
 		newLocation.Z = maxHeight;
 	}
-	else if (this->mIndicatorType == EAAHeightIndicatorType::BOTTOM) {
+	else if (this->mIndicatorType == HIT_BOTTOM) {
 		newLocation.Z = minHeight;
 	}
 	this->SetActorLocation(newLocation);

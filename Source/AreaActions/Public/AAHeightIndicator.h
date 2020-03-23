@@ -8,8 +8,8 @@
 
 UENUM()
 enum EAAHeightIndicatorType {
-	TOP,
-	BOTTOM
+	HIT_TOP,
+	HIT_BOTTOM
 };
 
 /**
