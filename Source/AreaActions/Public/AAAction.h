@@ -6,7 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "AAAction.generated.h"
 
-UCLASS(hidecategories = (Rendering, Replication, Input, Actor, Collision, "Actor Tick", LOD, Cooking))
+UCLASS(Abstract, hidecategories = (Rendering, Replication, Input, Actor, Collision, "Actor Tick", LOD, Cooking))
 class AREAACTIONS_API AAAAction : public AActor
 {
 	GENERATED_BODY()

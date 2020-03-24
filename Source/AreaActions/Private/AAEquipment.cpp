@@ -197,3 +197,7 @@ bool AAAEquipment::RaycastMouseWithRange(FHitResult& out_hitResult, bool ignoreC
 	params.AddIgnoredActors(otherIgnoredActors);
 	return GetWorld()->LineTraceSingleByChannel(out_hitResult, cameraLocation, lineTraceEnd, ECollisionChannel::ECC_Visibility, params);
 }
+
+void AAAEquipment::RunAction(TSubclassOf<AAAAction> actionClass) {
+	SML::Logging::warning(*actionClass->GetPathName());
+}

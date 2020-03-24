@@ -5,6 +5,7 @@
 #include "AACornerIndicator.h"
 #include "AAWallIndicator.h"
 #include "AAHeightIndicator.h"
+#include "AAAction.h"
 #include "CoreMinimal.h"
 #include "Equipment/FGEquipment.h"
 #include "FGInteractWidget.h"
@@ -45,6 +46,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void ClearSelection();
+
+	UFUNCTION(BlueprintCallable)
+	void RunAction(TSubclassOf<AAAAction> actionClass);
 
 private:
 	bool RaycastMouseWithRange(FHitResult & out_hitResult, bool ignoreCornerIndicators = false, bool ignoreWallIndicators = false, bool ignoreHeightIndicators = false, TArray<AActor*> otherIgnoredActors = TArray<AActor*>());

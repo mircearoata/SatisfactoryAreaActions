@@ -20,7 +20,8 @@
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
 				"FactoryGame",
-				"Engine"
+				"Engine",
+				"SML"
 			]
 		}
 	],
