@@ -3,8 +3,10 @@
 
 #include "AAAction.h"
 
-void AAAAction::Run(TArray<AActor*> actors)
-{
-
+void AAAAction::Init() {
+	BP_Init();
 }
 
+void AAAAction::Run() {
+
+}

@@ -6,6 +6,7 @@
 #include "FGHUD.h"
 #include "FGBuildable.h"
 #include "UI/FGGameUI.h"
+#include "GenericPlatform/GenericPlatformMath.h"
 
 AAAEquipment::AAAEquipment() : Super() {
 	this->mSelectionMode = SM_CORNER;
@@ -37,7 +38,7 @@ void AAAEquipment::PrimaryFire() {
 				this->RemoveCorner(cornerIdx);
 			}
 			else {
-				this->AddCorner(hitResult.Location);
+				this->AddCorner(FVector2D(hitResult.Location.X, hitResult.Location.Y));
 			}
 		}
 		break;
@@ -96,10 +97,10 @@ void AAAEquipment::SecondaryFire() {
 
 void AAAEquipment::SelectMap() {
 	this->ClearSelection();
-	this->AddCorner(FVector(-350000.0, -350000.0, 0));
-	this->AddCorner(FVector(450000.0, -350000.0, 0));
-	this->AddCorner(FVector(450000.0, 450000.0, 0));
-	this->AddCorner(FVector(-350000.0, 450000.0, 0));
+	this->AddCorner(FVector2D(-350000.0, -350000.0));
+	this->AddCorner(FVector2D(450000.0, -350000.0));
+	this->AddCorner(FVector2D(450000.0, 450000.0));
+	this->AddCorner(FVector2D(-350000.0, 450000.0));
 	this->UpdateHeight();
 }
 
@@ -125,24 +126,24 @@ void AAAEquipment::UpdateHeight() {
 	this->mTopIndicator->SetActorHiddenInGame(this->mAreaMaxZ == MaxZ);
 }
 
-AAAWallIndicator* AAAEquipment::CreateWallIndicator(FVector from, FVector to) {
-	FVector middle = (from + to) / 2;
-	float length = FVector::Dist(from, to);
-	float rotation = (to - from).Rotation().Yaw;
+AAAWallIndicator* AAAEquipment::CreateWallIndicator(FVector2D from, FVector2D to) {
+	FVector2D middle = (from + to) / 2;
+	float length = FVector::Dist(FVector(from, 0), FVector(to, 0));
+	float rotation = FVector((to - from), 0).Rotation().Yaw;
 
-	AAAWallIndicator* indicator = GetWorld()->SpawnActor<AAAWallIndicator>(WallIndicatorClass, middle, FRotator(0, rotation, 0));
+	AAAWallIndicator* indicator = GetWorld()->SpawnActor<AAAWallIndicator>(WallIndicatorClass, FVector(middle, 0), FRotator(0, rotation, 0));
 	indicator->SetActorScale3D(FVector(length, 1, 1));
 	indicator->UpdateHeight(this->mAreaMinZ, this->mAreaMaxZ);
 	return indicator;
 }
 
-AAACornerIndicator* AAAEquipment::CreateCornerIndicator(FVector location) {
-	AAACornerIndicator* indicator = GetWorld()->SpawnActor<AAACornerIndicator>(CornerIndicatorClass, location, FRotator::ZeroRotator);
+AAACornerIndicator* AAAEquipment::CreateCornerIndicator(FVector2D location) {
+	AAACornerIndicator* indicator = GetWorld()->SpawnActor<AAACornerIndicator>(CornerIndicatorClass, FVector(location, 0), FRotator::ZeroRotator);
 	indicator->UpdateHeight(this->mAreaMinZ, this->mAreaMaxZ);
 	return indicator;
 }
 
-void AAAEquipment::AddCorner(FVector location) {
+void AAAEquipment::AddCorner(FVector2D location) {
 	if(this->mWallIndicators.Num() > 1) {
 		AAAWallIndicator* wall2 = this->mWallIndicators[this->mWallIndicators.Num() - 1];
 		this->mWallIndicators.RemoveAt(this->mWallIndicators.Num() - 1);
@@ -216,6 +217,97 @@ void AAAEquipment::UpdateExtraActors() {
 	UFGOutlineComponent::Get(GetWorld())->ShowDismantlePendingMaterial(this->mExtraActors);
 }
 
+void GetMiddleOfActors(TArray<AActor*>& actors, FVector& middle) {
+	if (actors.Num() == 0)
+		return;
+	FVector min;
+	FVector max;
+	FVector tmp;
+
+	actors[0]->GetActorBounds(true, min, tmp);
+	max = min;
+
+	FVector actorCenter;
+	for (int i = 1; i < actors.Num(); i++) {
+		actors[i]->GetActorBounds(true, actorCenter, tmp);
+		min = min.ComponentMin(actorCenter);
+		max = max.ComponentMax(actorCenter);
+	}
+
+	middle = (min + max) / 2;
+}
+
+void GetMostCommonRotation(TArray<AActor*>& actors, FRotator& rotation) {
+	TMap<float, int> rotationCount;
+	for (int i = 0; i < actors.Num(); i++) {
+		float rotation = FGenericPlatformMath::Fmod(FGenericPlatformMath::Fmod(actors[i]->GetActorRotation().Yaw, 90) + 90, 90);
+		rotationCount.FindOrAdd(rotation)++;
+	}
+
+	float bestRotation = 0;
+	int maxCount = 0;
+	for (auto& rotationCnt : rotationCount) {
+		if (rotationCnt.Value > maxCount) {
+			maxCount = rotationCnt.Value;
+			bestRotation = rotationCnt.Key;
+		}
+	}
+	rotation = FRotator(0, bestRotation, 0);
+}
+
 void AAAEquipment::RunAction(TSubclassOf<AAAAction> actionClass) {
-	SML::Logging::warning(*actionClass->GetPathName());
+	if (this->mAreaCorners.Num() < 3) {
+		SML::Logging::error("Needs at least 3 corners!");
+		return;
+	}
+	TArray<AActor*> actorsInArea;
+	this->GetAllActorsInArea(actorsInArea);
+	FVector middle;
+	GetMiddleOfActors(actorsInArea, middle);
+	FRotator rotation;
+	GetMostCommonRotation(actorsInArea, rotation);
+
+	AAAAction* action = GetWorld()->SpawnActor<AAAAction>(actionClass, middle, rotation);
+	action->SetAAEquipment(this);
+	action->SetActors(actorsInArea);
+	action->Init();
+}
+
+bool IsPointInPolgon(FVector2D point, TArray<FVector2D>& polygon) {
+	if (polygon.Num() < 2)
+		return false;
+	FVector2D min, max;
+	min = max = polygon[0];
+	for (int i = 1; i < polygon.Num(); i++)
+	{
+		min = FVector2D::Min(min, polygon[i]);
+		max = FVector2D::Max(max, polygon[i]);
+	}
+
+	if (point.X < min.X || point.X > max.X || point.Y < min.Y || point.Y > max.Y)
+		return false;
+
+	bool inside = false;
+	for (int i = 0, j = polygon.Num() - 1; i < polygon.Num(); j = i++)
+	{
+		if ((polygon[i].Y > point.Y) != (polygon[j].Y > point.Y) &&
+			point.X < (polygon[j].X - polygon[i].X) * (point.Y - polygon[i].Y) / (polygon[j].Y - polygon[i].Y) + polygon[i].X)
+		{
+			inside = !inside;
+		}
+	}
+
+	return inside;
+}
+
+bool IsActorInArea(AActor* actor, TArray<FVector2D>& corners, float minZ, float maxZ) {
+	return minZ <= actor->GetActorLocation().Z && actor->GetActorLocation().Z <= maxZ && IsPointInPolgon(FVector2D(actor->GetActorLocation().X, actor->GetActorLocation().Y), corners);
+}
+
+void AAAEquipment::GetAllActorsInArea(TArray<AActor*>& out_actors) {
+	for (TActorIterator<AFGBuildable> ActorIt(GetWorld()); ActorIt; ++ActorIt) {
+		if (IsActorInArea(*ActorIt, this->mAreaCorners, this->mAreaMinZ, this->mAreaMaxZ)) {
+			out_actors.Add(*ActorIt);
+		}
+	}
 }

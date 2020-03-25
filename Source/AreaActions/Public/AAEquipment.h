@@ -55,14 +55,16 @@ public:
 private:
 	bool RaycastMouseWithRange(FHitResult & out_hitResult, bool ignoreCornerIndicators = false, bool ignoreWallIndicators = false, bool ignoreHeightIndicators = false, TArray<AActor*> otherIgnoredActors = TArray<AActor*>());
 
-	void AddCorner(FVector location);
+	void AddCorner(FVector2D location);
 	void RemoveCorner(int cornerIdx);
 	void UpdateHeight();
 
-	AAACornerIndicator* CreateCornerIndicator(FVector location);
-	AAAWallIndicator* CreateWallIndicator(FVector from, FVector to);
+	AAACornerIndicator* CreateCornerIndicator(FVector2D location);
+	AAAWallIndicator* CreateWallIndicator(FVector2D from, FVector2D to);
 
 	void UpdateExtraActors();
+
+	void GetAllActorsInArea(TArray<AActor*>& out_actors);
 private:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AAACornerIndicator> CornerIndicatorClass;
@@ -88,7 +90,7 @@ private:
 	UPROPERTY()
 	TArray<AActor*> mExtraActors;
 
-	TArray<FVector> mAreaCorners;
+	TArray<FVector2D> mAreaCorners;
 	float mAreaMinZ;
 	float mAreaMaxZ;
 	EAASelectionMode mSelectionMode;

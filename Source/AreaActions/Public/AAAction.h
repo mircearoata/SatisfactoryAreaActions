@@ -11,7 +11,22 @@ class AREAACTIONS_API AAAAction : public AActor
 {
 	GENERATED_BODY()
 public:
-	virtual void Run(TArray<AActor*> actors);
+	virtual void Init();
+
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Init"))
+	void BP_Init();
+
+	UFUNCTION(BlueprintCallable)
+	virtual void Run();
+
+	FORCEINLINE void SetActors(TArray<AActor*> actors) { this->mActors = actors; }
+	FORCEINLINE void SetAAEquipment(class AAAEquipment* equipment) { this->mAAEquipment = equipment; }
+protected:
+	UPROPERTY()
+	TArray<AActor*> mActors;
+
+	UPROPERTY()
+	class AAAEquipment* mAAEquipment;
 
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Action")

@@ -17,12 +17,7 @@
 		{
 			"Name": "AreaActions",
 			"Type": "Runtime",
-			"LoadingPhase": "Default",
-			"AdditionalDependencies": [
-				"FactoryGame",
-				"Engine",
-				"SML"
-			]
+			"LoadingPhase": "Default"
 		}
 	],
 	"Plugins": [
