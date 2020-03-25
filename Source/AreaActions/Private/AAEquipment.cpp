@@ -4,6 +4,7 @@
 #include "AAEquipment.h"
 #include "SML/util/Logging.h"
 #include "FGHUD.h"
+#include "FGBuildable.h"
 #include "UI/FGGameUI.h"
 
 AAAEquipment::AAAEquipment() : Super() {
@@ -18,6 +19,11 @@ void AAAEquipment::BeginPlay() {
 	this->mTopIndicator = GetWorld()->SpawnActor<AAAHeightIndicator>(HeightIndicatorClass, FVector(0, 0, this->mAreaMaxZ), FRotator::ZeroRotator);
 	this->mTopIndicator->SetIndicatorType(HIT_TOP);
 	this->UpdateHeight();
+}
+
+void AAAEquipment::Equip(class AFGCharacterPlayer* character) {
+	Super::Equip(character);
+	this->UpdateExtraActors();
 }
 
 void AAAEquipment::PrimaryFire() {
@@ -69,7 +75,15 @@ void AAAEquipment::PrimaryFire() {
 		break;
 	case SM_BUILDING:
 		if (RaycastMouseWithRange(hitResult, true, true, true)) {
-
+			if (hitResult.Actor->IsA<AFGBuildable>()) {
+				if (this->mExtraActors.Contains(hitResult.Actor.Get())) {
+					this->mExtraActors.Remove(hitResult.Actor.Get());
+				}
+				else {
+					this->mExtraActors.Add(hitResult.Actor.Get());
+				}
+				this->UpdateExtraActors();
+			}
 		}
 		break;
 	default:
@@ -196,6 +210,10 @@ bool AAAEquipment::RaycastMouseWithRange(FHitResult& out_hitResult, bool ignoreC
 	params.AddIgnoredActors(ignoredActors);
 	params.AddIgnoredActors(otherIgnoredActors);
 	return GetWorld()->LineTraceSingleByChannel(out_hitResult, cameraLocation, lineTraceEnd, ECollisionChannel::ECC_Visibility, params);
+}
+
+void AAAEquipment::UpdateExtraActors() {
+	UFGOutlineComponent::Get(GetWorld())->ShowDismantlePendingMaterial(this->mExtraActors);
 }
 
 void AAAEquipment::RunAction(TSubclassOf<AAAAction> actionClass) {

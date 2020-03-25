@@ -32,6 +32,8 @@ public:
 
 	void BeginPlay() override;
 
+	void Equip(class AFGCharacterPlayer* character) override;
+
 	UFUNCTION(BlueprintCallable)
 	void PrimaryFire();
 
@@ -59,6 +61,8 @@ private:
 
 	AAACornerIndicator* CreateCornerIndicator(FVector location);
 	AAAWallIndicator* CreateWallIndicator(FVector from, FVector to);
+
+	void UpdateExtraActors();
 private:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AAACornerIndicator> CornerIndicatorClass;
@@ -81,6 +85,9 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UFGInteractWidget> MainWidgetClass;
 private:
+	UPROPERTY()
+	TArray<AActor*> mExtraActors;
+
 	TArray<FVector> mAreaCorners;
 	float mAreaMinZ;
 	float mAreaMaxZ;
