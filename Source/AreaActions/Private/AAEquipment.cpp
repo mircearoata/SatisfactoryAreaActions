@@ -24,7 +24,14 @@ void AAAEquipment::BeginPlay() {
 
 void AAAEquipment::Equip(class AFGCharacterPlayer* character) {
 	Super::Equip(character);
-	this->UpdateExtraActors();
+	this->DelayedUpdateExtraActors();
+}
+
+void AAAEquipment::UnEquip() {
+	Super::UnEquip();
+	if (this->mExtraActors.Num() > 0) {
+		UFGOutlineComponent::Get(GetWorld())->HideAllDismantlePendingMaterial();
+	}
 }
 
 void AAAEquipment::PrimaryFire() {
@@ -111,6 +118,8 @@ void AAAEquipment::ClearSelection() {
 	this->mAreaMinZ = MinZ;
 	this->mAreaMaxZ = MaxZ;
 	this->UpdateHeight();
+	this->mExtraActors.Empty();
+	this->UpdateExtraActors();
 }
 
 void AAAEquipment::UpdateHeight() {
@@ -240,8 +249,8 @@ void GetMiddleOfActors(TArray<AActor*>& actors, FVector& middle) {
 void GetMostCommonRotation(TArray<AActor*>& actors, FRotator& rotation) {
 	TMap<float, int> rotationCount;
 	for (int i = 0; i < actors.Num(); i++) {
-		float rotation = FGenericPlatformMath::Fmod(FGenericPlatformMath::Fmod(actors[i]->GetActorRotation().Yaw, 90) + 90, 90);
-		rotationCount.FindOrAdd(rotation)++;
+		float actorRotationMod = FGenericPlatformMath::Fmod(FGenericPlatformMath::Fmod(actors[i]->GetActorRotation().Yaw, 90) + 90, 90);
+		rotationCount.FindOrAdd(actorRotationMod)++;
 	}
 
 	float bestRotation = 0;
@@ -256,21 +265,31 @@ void GetMostCommonRotation(TArray<AActor*>& actors, FRotator& rotation) {
 }
 
 void AAAEquipment::RunAction(TSubclassOf<AAAAction> actionClass) {
-	if (this->mAreaCorners.Num() < 3) {
-		SML::Logging::error("Needs at least 3 corners!");
+	if (this->mAreaCorners.Num() < 3 && this->mExtraActors.Num() == 0) {
+		this->ShowMessageOk(WidgetTitle, AreaNotSetMessage);
+		return;
+	}
+	if (this->mCurrentAction) {
+		this->ShowMessageOk(WidgetTitle, ConflictingActionRunningMessage);
 		return;
 	}
 	TArray<AActor*> actorsInArea;
 	this->GetAllActorsInArea(actorsInArea);
+	actorsInArea.Append(this->mExtraActors);
 	FVector middle;
 	GetMiddleOfActors(actorsInArea, middle);
 	FRotator rotation;
 	GetMostCommonRotation(actorsInArea, rotation);
 
-	AAAAction* action = GetWorld()->SpawnActor<AAAAction>(actionClass, middle, rotation);
-	action->SetAAEquipment(this);
-	action->SetActors(actorsInArea);
-	action->Init();
+	this->mCurrentAction = GetWorld()->SpawnActor<AAAAction>(actionClass, middle, rotation);
+	this->mCurrentAction->SetAAEquipment(this);
+	this->mCurrentAction->SetActors(actorsInArea);
+	this->mCurrentAction->Init();
+}
+
+void AAAEquipment::ActionDone() {
+	this->mCurrentAction->Destroy();
+	this->mCurrentAction = nullptr;
 }
 
 bool IsPointInPolgon(FVector2D point, TArray<FVector2D>& polygon) {
@@ -310,4 +329,8 @@ void AAAEquipment::GetAllActorsInArea(TArray<AActor*>& out_actors) {
 			out_actors.Add(*ActorIt);
 		}
 	}
+}
+
+AFGPlayerController* AAAEquipment::GetOwningController() {
+	return (AFGPlayerController*)this->GetInstigatorCharacter()->GetController();
 }

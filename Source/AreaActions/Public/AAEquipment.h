@@ -33,6 +33,7 @@ public:
 	void BeginPlay() override;
 
 	void Equip(class AFGCharacterPlayer* character) override;
+	void UnEquip() override;
 
 	UFUNCTION(BlueprintCallable)
 	void PrimaryFire();
@@ -51,6 +52,23 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void RunAction(TSubclassOf<AAAAction> actionClass);
+	
+	UFUNCTION(BlueprintPure)
+	class AFGPlayerController* GetOwningController();
+	
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
+	void AddWidget(UFGInteractWidget* widget);
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void ShowMessageOk(const FText& title, const FText& message);
+
+	UFUNCTION(BlueprintCallable)
+	void UpdateExtraActors();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void DelayedUpdateExtraActors();
+public:
+	void ActionDone();
 
 private:
 	bool RaycastMouseWithRange(FHitResult & out_hitResult, bool ignoreCornerIndicators = false, bool ignoreWallIndicators = false, bool ignoreHeightIndicators = false, TArray<AActor*> otherIgnoredActors = TArray<AActor*>());
@@ -62,9 +80,33 @@ private:
 	AAACornerIndicator* CreateCornerIndicator(FVector2D location);
 	AAAWallIndicator* CreateWallIndicator(FVector2D from, FVector2D to);
 
-	void UpdateExtraActors();
-
 	void GetAllActorsInArea(TArray<AActor*>& out_actors);
+
+protected:
+	UPROPERTY(BlueprintReadOnly)
+	AAAAction* mCurrentAction;
+
+private:
+	UPROPERTY()
+	TArray<AActor*> mExtraActors;
+
+	TArray<FVector2D> mAreaCorners;
+	float mAreaMinZ;
+	float mAreaMaxZ;
+	EAASelectionMode mSelectionMode;
+	
+	UPROPERTY()
+	TArray<AAACornerIndicator*> mCornerIndicators;
+	
+	UPROPERTY()
+	TArray<AAAWallIndicator*> mWallIndicators;
+	
+	UPROPERTY()
+	AAAHeightIndicator* mTopIndicator;
+
+	UPROPERTY()
+	AAAHeightIndicator* mBottomIndicator;
+
 private:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AAACornerIndicator> CornerIndicatorClass;
@@ -86,24 +128,13 @@ private:
 	
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UFGInteractWidget> MainWidgetClass;
-private:
-	UPROPERTY()
-	TArray<AActor*> mExtraActors;
-
-	TArray<FVector2D> mAreaCorners;
-	float mAreaMinZ;
-	float mAreaMaxZ;
-	EAASelectionMode mSelectionMode;
-
-	UPROPERTY()
-	TArray<AAACornerIndicator*> mCornerIndicators;
 	
-	UPROPERTY()
-	TArray<AAAWallIndicator*> mWallIndicators;
+	UPROPERTY(EditDefaultsOnly)
+	FText WidgetTitle = FText::FromString(TEXT("Area Actions"));
 	
-	UPROPERTY()
-	AAAHeightIndicator* mTopIndicator;
-
-	UPROPERTY()
-	AAAHeightIndicator* mBottomIndicator;
+	UPROPERTY(EditDefaultsOnly)
+	FText AreaNotSetMessage = FText::FromString(TEXT("Needs at least 3 corners, or at least one selected building!"));
+	
+	UPROPERTY(EditDefaultsOnly)
+	FText ConflictingActionRunningMessage = FText::FromString(TEXT("Another action is already running!"));
 };

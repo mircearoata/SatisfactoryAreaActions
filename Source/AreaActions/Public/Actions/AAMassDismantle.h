@@ -16,7 +16,14 @@ class AREAACTIONS_API AAAMassDismantle : public AAAAction
 	GENERATED_BODY()
 
 public:
-	void Run() override;
+	void InternalRun() override;
+
+	UFUNCTION(BlueprintCallable)
+	void GiveRefunds();
+
+protected:
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FInventoryStack> mRefunds;
 
 private:
 	UPROPERTY(EditDefaultsOnly)
