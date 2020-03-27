@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "AAEquipment.h"
 #include "SML/util/Logging.h"
 #include "FGHUD.h"

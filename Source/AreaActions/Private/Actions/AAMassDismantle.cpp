@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Actions/AAMassDismantle.h"
 #include "FGBuildable.h"
 #include "AAEquipment.h"

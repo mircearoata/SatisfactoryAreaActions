@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "AAIndicator.h"
 
 void AAAIndicator::UpdateHeight(float minHeight, float maxHeight) {

@@ -11,6 +11,10 @@
 #include "FGInteractWidget.h"
 #include "AAEquipment.generated.h"
 
+DECLARE_DYNAMIC_DELEGATE(FOnMessageOk);
+DECLARE_DYNAMIC_DELEGATE(FOnMessageYes);
+DECLARE_DYNAMIC_DELEGATE(FOnMessageNo);
+
 UENUM()
 enum EAASelectionMode {
 	SM_CORNER,
@@ -58,17 +62,27 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
 	void AddWidget(UFGInteractWidget* widget);
-
-	UFUNCTION(BlueprintImplementableEvent)
+	
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, meta = (AutoCreateRefTerm = "title,message"))
 	void ShowMessageOk(const FText& title, const FText& message);
+	
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, meta = (AutoCreateRefTerm = "title,message"))
+	void ShowMessageOkDelegate(const FText& title, const FText& message, const FOnMessageOk& onOkClicked);
+
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, meta = (AutoCreateRefTerm = "title,message"))
+	void ShowMessageYesNoDelegate(const FText& title, const FText& message, const FOnMessageYes& onYesClicked, const FOnMessageNo& onNoClicked);
 
 	UFUNCTION(BlueprintCallable)
 	void UpdateExtraActors();
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void DelayedUpdateExtraActors();
+
 public:
 	void ActionDone();
+
+private:
+
 
 private:
 	bool RaycastMouseWithRange(FHitResult & out_hitResult, bool ignoreCornerIndicators = false, bool ignoreWallIndicators = false, bool ignoreHeightIndicators = false, TArray<AActor*> otherIgnoredActors = TArray<AActor*>());
