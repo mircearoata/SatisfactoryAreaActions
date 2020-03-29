@@ -283,7 +283,7 @@ void AAAEquipment::RunAction(TSubclassOf<AAAAction> actionClass) {
 	this->mCurrentAction = GetWorld()->SpawnActor<AAAAction>(actionClass, middle, rotation);
 	this->mCurrentAction->SetAAEquipment(this);
 	this->mCurrentAction->SetActors(actorsInArea);
-	this->mCurrentAction->Init();
+	this->mCurrentAction->InternalRun();
 }
 
 void AAAEquipment::ActionDone() {

@@ -6,7 +6,7 @@
 #include "FGCharacterPlayer.h"
 #include "SML/util/Logging.h"
 
-void AAAMassDismantle::InternalRun() {
+void AAAMassDismantle::DoDismantle() {
 	for (AActor* actor : this->mActors) {
 		TArray<FInventoryStack> buildingRefunds;
 		((AFGBuildable*)actor)->GetDismantleRefund_Implementation(buildingRefunds);

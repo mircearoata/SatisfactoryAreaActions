@@ -4,15 +4,12 @@
 #include "AAEquipment.h"
 #include "SML/util/Logging.h"
 
-void AAAAction::Init_Implementation() {
-}
-
-void AAAAction::Run() {
-	this->InternalRun();
-	this->PostRun();
+void AAAAction::Run_Implementation() {
 }
 
 void AAAAction::InternalRun() {
+	this->Run();
+	this->PostRun();
 }
 
 void AAAAction::Done() {

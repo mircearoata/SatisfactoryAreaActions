@@ -4,17 +4,18 @@
 #include "AAEquipment.h"
 #include "FGBuildableManufacturer.h"
 
-void AAASetRecipe::InternalRun() {
-	if (!this->mSelectedRecipe) {
+void AAASetRecipe::SetRecipe(TSubclassOf<UFGRecipe> selectedRecipe) {
+	if (!selectedRecipe) {
+		this->Done();
 		return;
 	}
 	TMap<TSubclassOf<AFGBuildableManufacturer>, int> statistics;
 	for (AActor* actor : this->mActors) {
 		if (actor->IsA<AFGBuildableManufacturer>()) {
-			if (UFGRecipe::GetProducedIn(this->mSelectedRecipe).Contains(actor->GetClass())) {
+			if (UFGRecipe::GetProducedIn(selectedRecipe).Contains(actor->GetClass())) {
 				((AFGBuildableManufacturer*)actor)->GetInputInventory()->Empty();
 				((AFGBuildableManufacturer*)actor)->GetOutputInventory()->Empty();
-				((AFGBuildableManufacturer*)actor)->SetRecipe(this->mSelectedRecipe);
+				((AFGBuildableManufacturer*)actor)->SetRecipe(selectedRecipe);
 
 				statistics.FindOrAdd(actor->GetClass())++;
 			}
@@ -37,7 +38,7 @@ void AAASetRecipe::InternalRun() {
 		FOnMessageOk messageOk;
 		messageOk.BindDynamic(this, &AAASetRecipe::Done);
 		FText title = FText::FromString(TEXT("Set Recipe"));
-		FText message = FText::FromString(FString::Printf(TEXT("Set recipe to %s for %s"), *UFGRecipe::GetRecipeName(this->mSelectedRecipe).ToString(), *machinesCountString));
+		FText message = FText::FromString(FString::Printf(TEXT("Set recipe to %s for %s"), *UFGRecipe::GetRecipeName(selectedRecipe).ToString(), *machinesCountString));
 		this->mAAEquipment->ShowMessageOkDelegate(title, message, messageOk);
 	}
 }

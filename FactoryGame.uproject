@@ -19,7 +19,8 @@
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
-				"FactoryGame"
+				"FactoryGame",
+				"Engine"
 			]
 		}
 	],

@@ -16,9 +16,6 @@ class AREAACTIONS_API AAASetRecipe : public AAAAction
 	GENERATED_BODY()
 
 public:
-	void InternalRun() override;
-
-protected:
-	UPROPERTY(BlueprintReadWrite)
-	TSubclassOf<UFGRecipe> mSelectedRecipe;
+	UFUNCTION(BlueprintCallable)
+	void SetRecipe(TSubclassOf<UFGRecipe> selectedRecipe);
 };

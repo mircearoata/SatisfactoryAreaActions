@@ -13,12 +13,9 @@ class AREAACTIONS_API AAAAction : public AActor
 	GENERATED_BODY()
 public:
 	UFUNCTION(BlueprintNativeEvent)
-	void Init();
-	
-	UFUNCTION(BlueprintCallable)
 	void Run();
 
-	virtual void InternalRun();
+	void InternalRun();
 	
 	UFUNCTION(BlueprintNativeEvent)
 	void PostRun();
