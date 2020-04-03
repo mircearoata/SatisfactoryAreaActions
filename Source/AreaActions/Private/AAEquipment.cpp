@@ -218,7 +218,7 @@ bool AAAEquipment::RaycastMouseWithRange(FHitResult& out_hitResult, bool ignoreC
 	FCollisionQueryParams params = FCollisionQueryParams::DefaultQueryParam;
 	params.AddIgnoredActors(ignoredActors);
 	params.AddIgnoredActors(otherIgnoredActors);
-	return GetWorld()->LineTraceSingleByChannel(out_hitResult, cameraLocation, lineTraceEnd, ECollisionChannel::ECC_Visibility, params);
+	return GetWorld()->LineTraceSingleByChannel(out_hitResult, cameraLocation, lineTraceEnd, ECC_Visibility, params);
 }
 
 void AAAEquipment::UpdateExtraActors() {

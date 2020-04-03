@@ -1,6 +1,5 @@
 #include "AreaActionsModule.h"
 #include "SML/mod/hooking.h"
-#include "FGHUD.h"
 #include "FGHologram.h"
 #include "SML/util/Logging.h"
 

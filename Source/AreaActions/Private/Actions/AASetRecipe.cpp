@@ -24,9 +24,8 @@ void AAASetRecipe::SetRecipe(TSubclassOf<UFGRecipe> selectedRecipe) {
 	if (statistics.Num() == 0) {
 		FOnMessageOk messageOk;
 		messageOk.BindDynamic(this, &AAASetRecipe::Done);
-		FText title = FText::FromString(TEXT("Set Recipe"));
 		FText message = FText::FromString(TEXT("No machines in the area accept this recipe."));
-		this->mAAEquipment->ShowMessageOkDelegate(title, message, messageOk);
+		this->mAAEquipment->ShowMessageOkDelegate(ActionName, message, messageOk);
 	}
 	else {
 		FString machinesCountString;
@@ -37,8 +36,7 @@ void AAASetRecipe::SetRecipe(TSubclassOf<UFGRecipe> selectedRecipe) {
 		
 		FOnMessageOk messageOk;
 		messageOk.BindDynamic(this, &AAASetRecipe::Done);
-		FText title = FText::FromString(TEXT("Set Recipe"));
 		FText message = FText::FromString(FString::Printf(TEXT("Set recipe to %s for %s"), *UFGRecipe::GetRecipeName(selectedRecipe).ToString(), *machinesCountString));
-		this->mAAEquipment->ShowMessageOkDelegate(title, message, messageOk);
+		this->mAAEquipment->ShowMessageOkDelegate(ActionName, message, messageOk);
 	}
 }
