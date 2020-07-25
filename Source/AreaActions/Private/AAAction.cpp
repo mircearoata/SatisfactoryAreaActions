@@ -12,7 +12,8 @@ void AAAAction::InternalRun() {
 	this->PostRun();
 }
 
-void AAAAction::Done() {
+void AAAAction::Done()
+{
 	this->mAAEquipment->ActionDone();
 }
 

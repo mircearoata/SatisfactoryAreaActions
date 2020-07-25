@@ -5,13 +5,15 @@
 #include "FGOutlineComponent.h"
 
 AAACopy::AAACopy() {
-	this->mCopyBuildingsComponent = CreateDefaultSubobject<UAACopyBuildingsComponent>(TEXT("CopyBuildings"));
+	this->CopyBuildingsComponent = CreateDefaultSubobject<UAACopyBuildingsComponent>(TEXT("CopyBuildings"));
+	this->DeltaPosition = FVector::ZeroVector;
+	this->DeltaRotation = FRotator::ZeroRotator;
+	this->PreviewExists = false;
 }
 
 void AAACopy::Run_Implementation() {
-	this->mCopyBuildingsComponent->SetAAEquipment(this->mAAEquipment);
 	TArray<AFGBuildable*> buildingsWithIssues;
-	if (!this->mCopyBuildingsComponent->SetActors(this->mActors, buildingsWithIssues)) {
+	if (!this->CopyBuildingsComponent->SetActors(this->mActors, buildingsWithIssues)) {
 		TArray<AActor*> asActors;
 		for (AFGBuildable* building : buildingsWithIssues) {
 			asActors.Add(building);
@@ -23,15 +25,33 @@ void AAACopy::Run_Implementation() {
 		this->mAAEquipment->ShowMessageOkDelegate(ActionName, message, messageOk);
 	}
 	else {
-		this->mCopyBuildingsComponent->AddCopy(FVector(0, 0, 1000), FRotator::ZeroRotator);
+		this->SetDelta(FVector(0, 0, 1000), FRotator::ZeroRotator, FVector::ZeroVector);
+		this->Preview();
 		FTimerDelegate TimerCallback;
 		TimerCallback.BindLambda([=]()
         {
-			this->mCopyBuildingsComponent->Finish();
-			this->Done();
+			this->SetDelta(FVector(0, 1000, 1000), FRotator::ZeroRotator, FVector::ZeroVector);
+			this->Preview();
+			this->Finish();
         });
 
 		FTimerHandle Handle;
 		GetWorld()->GetTimerManager().SetTimer(Handle, TimerCallback, 10.0f, false);
 	}
+}
+
+void AAACopy::Preview()
+{
+	if(!PreviewExists)
+		this->CopyBuildingsComponent->AddCopy(DeltaPosition, DeltaRotation);
+	else
+		this->CopyBuildingsComponent->MoveCopy(0, DeltaPosition, DeltaRotation);
+	PreviewExists = true;
+}
+
+void AAACopy::Finish()
+{
+	this->Preview();
+	this->CopyBuildingsComponent->Finish();
+	this->Done();
 }
