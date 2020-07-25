@@ -24,6 +24,14 @@ void AAACopy::Run_Implementation() {
 	}
 	else {
 		this->mCopyBuildingsComponent->AddCopy(FVector(0, 0, 1000), FRotator::ZeroRotator);
-		this->Done();
+		FTimerDelegate TimerCallback;
+		TimerCallback.BindLambda([=]()
+        {
+			this->mCopyBuildingsComponent->Finish();
+			this->Done();
+        });
+
+		FTimerHandle Handle;
+		GetWorld()->GetTimerManager().SetTimer(Handle, TimerCallback, 10.0f, false);
 	}
 }
