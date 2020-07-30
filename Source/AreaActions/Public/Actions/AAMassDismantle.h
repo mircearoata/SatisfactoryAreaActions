@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "AAAction.h"
 #include "FGCrate.h"
+#include "FGInventoryComponent.h"
+
 #include "AAMassDismantle.generated.h"
 
 /**

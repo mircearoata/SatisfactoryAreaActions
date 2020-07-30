@@ -9,12 +9,28 @@
 #include "AACopyBuildingsComponent.generated.h"
 
 USTRUCT()
+struct FRotatedBoundingBox
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FVector Center;
+	UPROPERTY()
+	FVector Extents;
+	/** Only has yaw */
+	UPROPERTY()
+	FRotator Rotation;
+
+	FVector GetCorner(uint32 CornerNum) const;
+};
+
+USTRUCT()
 struct FPreviewBuildings
 {
 	GENERATED_BODY()
 
 	UPROPERTY()
-	TMap<int32, AFGBuildable*> mBuildings;
+	TMap<int32, AFGBuildable*> Buildings;
 };
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -25,31 +41,37 @@ class AREAACTIONS_API UAACopyBuildingsComponent : public UActorComponent
 public:
 	UAACopyBuildingsComponent();
 
-	bool SetActors(TArray<AActor*>& actors, TArray<AFGBuildable*>& out_buildingsWithIssues);
-	bool SetBuildings(TArray<AFGBuildable*>& buildings, TArray<AFGBuildable*>& out_buildingsWithIssues);
-	bool ValidateBuildings(TArray<AFGBuildable*>& out_buildingsWithIssues);
+	bool SetActors(TArray<AActor*>& Actors, TArray<AFGBuildable*>& OutBuildingsWithIssues);
+	bool SetBuildings(TArray<AFGBuildable*>& Buildings, TArray<AFGBuildable*>& OutBuildingsWithIssues);
+	bool ValidateBuildings(TArray<AFGBuildable*>& OutBuildingsWithIssues);
 
-	int AddCopy(FVector offset, FRotator rotation);
-	void MoveCopy(int copyId, FVector offset, FRotator rotation);
-	void RemoveCopy(int copyId);
+	FORCEINLINE FVector GetBuildingsCenter() const { return BuildingsBounds.Center; }
+	FORCEINLINE FRotatedBoundingBox GetBounds() const { return BuildingsBounds; }
 
+	int AddCopy(FVector Offset, FRotator Rotation, FVector RotationCenter, bool Relative = true);
+	FORCEINLINE int AddCopy(const FVector Offset, const FRotator Rotation, const bool Relative = true) { return this->AddCopy(Offset, Rotation, GetBuildingsCenter(), Relative); }
+	void MoveCopy(int CopyId, FVector Offset, FRotator Rotation, FVector RotationCenter, bool Relative = true);
+	FORCEINLINE void MoveCopy(const int CopyId, const FVector Offset, const FRotator Rotation, const bool Relative = true) { this->MoveCopy(CopyId, Offset, Rotation, GetBuildingsCenter(), Relative); }
+	void RemoveCopy(int CopyId);
+	
 	void Finish();
 
 private:
-	bool ValidateObject(UObject* buildable);
+	bool ValidateObject(UObject* Buildable);
 
-	void FixReferencesToBuilding(UObject* from, UObject* to, UObject* referenceFrom, UObject* referenceTo) const;
-
+	void CalculateBounds();
 private:
-	int32 mCurrentId;
+	int32 CurrentId;
 	
 	UPROPERTY()
-	TArray<AFGBuildable*> mOriginalBuildings;
+	TArray<AFGBuildable*> OriginalBuildings;
 
-	TArray<TPair<FVector, FRotator>> mCopyLocations;
+	TArray<TPair<FVector, FRotator>> CopyLocations;
 
 	UPROPERTY()
-	TMap<AFGBuildable*, FPreviewBuildings> mBuildingsPreview;
+	TMap<AFGBuildable*, FPreviewBuildings> BuildingsPreview;
 
 	TSet<UProperty*> ValidCheckSkipProperties;
+
+	FRotatedBoundingBox BuildingsBounds;
 };

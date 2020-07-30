@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Actions/AACopy.h"
+
 #include "AAEquipment.h"
 #include "FGOutlineComponent.h"
 
@@ -30,7 +31,7 @@ void AAACopy::Run_Implementation() {
 		FTimerDelegate TimerCallback;
 		TimerCallback.BindLambda([=]()
         {
-			this->SetDelta(FVector(0, 1000, 1000), FRotator::ZeroRotator, FVector::ZeroVector);
+			this->SetDelta(FVector(0, 1000, 1000), FRotator(0, 45, 0), FVector::ZeroVector);
 			this->Preview();
 			this->Finish();
         });

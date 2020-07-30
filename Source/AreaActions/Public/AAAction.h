@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "FGInventoryLibrary.h"
 #include "AAAction.generated.h"
 
 UCLASS(Abstract, hidecategories = (Rendering, Replication, Input, Actor, Collision, "Actor Tick", LOD, Cooking))

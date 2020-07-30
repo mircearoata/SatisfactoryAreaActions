@@ -17,10 +17,10 @@ class AREAACTIONS_API AAACopy : public AAAAction
 
 public:
 	AAACopy();
-	void Run_Implementation() override;
+	virtual void Run_Implementation() override;
 
 	UFUNCTION(BlueprintCallable)
-	void SetDelta(FVector DeltaPosition, FRotator DeltaRotation, FVector RotationCenter) { this->DeltaPosition = DeltaPosition; this->DeltaRotation = DeltaRotation; }
+	void SetDelta(const FVector InDeltaPosition, const FRotator InDeltaRotation, FVector InRotationCenter) { this->DeltaPosition = InDeltaPosition; this->DeltaRotation = InDeltaRotation; }
 	
 	UFUNCTION(BlueprintCallable)
 	void Preview();

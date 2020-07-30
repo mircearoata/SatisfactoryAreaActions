@@ -3,35 +3,54 @@
 #include "AACopyBuildingsComponent.h"
 
 #include "SML/util/Logging.h"
-#include "AAEquipment.h"
 #include "FGColoredInstanceMeshProxy.h"
 #include "FGFactorySettings.h"
 #include "GameFramework/Actor.h"
 #pragma optimize( "", off )
+
+FVector FRotatedBoundingBox::GetCorner(const uint32 CornerNum) const
+{
+    switch(CornerNum)
+    {
+    case 0:
+        return Center + Rotation.RotateVector(FVector(Extents.X, Extents.Y, 0));
+    case 1:
+        return Center + Rotation.RotateVector(FVector(Extents.X, -Extents.Y, 0));
+    case 2:
+        return Center + Rotation.RotateVector(FVector(-Extents.X, -Extents.Y, 0));
+    case 3:
+        return Center + Rotation.RotateVector(FVector(-Extents.X, Extents.Y, 0));
+    default:
+        return Center;
+    }
+}
 
 UAACopyBuildingsComponent::UAACopyBuildingsComponent()
 {
     ValidCheckSkipProperties.Add(AActor::StaticClass()->FindPropertyByName(TEXT("Owner")));
 }
 
-bool UAACopyBuildingsComponent::SetActors(TArray<AActor*>& actors, TArray<AFGBuildable*>& out_buildingsWithIssues)
+bool UAACopyBuildingsComponent::SetActors(TArray<AActor*>& actors, TArray<AFGBuildable*>& OutBuildingsWithIssues)
 {
     TArray<AFGBuildable*> buildings;
     for (AActor* actor : actors)
         if (actor->IsA<AFGBuildable>())
             buildings.Add(static_cast<AFGBuildable*>(actor));
-    return SetBuildings(buildings, out_buildingsWithIssues);
+    return SetBuildings(buildings, OutBuildingsWithIssues);
 }
 
 bool UAACopyBuildingsComponent::SetBuildings(TArray<AFGBuildable*>& buildings,
-                                             TArray<AFGBuildable*>& out_buildingsWithIssues)
+                                             TArray<AFGBuildable*>& OutBuildingsWithIssues)
 {
-    this->mOriginalBuildings = buildings;
-    Algo::Sort(this->mOriginalBuildings, [](AFGBuildable* a, AFGBuildable* b)
+    this->OriginalBuildings = buildings;
+    Algo::Sort(this->OriginalBuildings, [](AFGBuildable* a, AFGBuildable* b)
     {
         return a->GetBuildTime() < b->GetBuildTime();
     });
-    return ValidateBuildings(out_buildingsWithIssues);
+    const bool Ret = ValidateBuildings(OutBuildingsWithIssues);
+    if(Ret)
+        CalculateBounds();
+    return Ret;
 }
 
 bool UAACopyBuildingsComponent::ValidateObject(UObject* obj)
@@ -53,7 +72,7 @@ bool UAACopyBuildingsComponent::ValidateObject(UObject* obj)
                 if (!name.StartsWith(GetWorld()->GetPathName())) continue;
 
                 bool propertyElementValid = false;
-                for (AFGBuildable* otherBuilding : this->mOriginalBuildings)
+                for (AFGBuildable* otherBuilding : this->OriginalBuildings)
                 {
                     if (name.Contains(*(otherBuilding->GetPathName() + ".")) || value == otherBuilding)
                     {
@@ -96,7 +115,7 @@ bool UAACopyBuildingsComponent::ValidateObject(UObject* obj)
                     if (!name.StartsWith(GetWorld()->GetPathName())) continue;
 
                     bool propertyElementValid = false;
-                    for (AFGBuildable* otherBuilding : this->mOriginalBuildings)
+                    for (AFGBuildable* otherBuilding : this->OriginalBuildings)
                     {
                         if (name.Contains(*(otherBuilding->GetPathName() + ".")) || value == otherBuilding)
                         {
@@ -144,7 +163,7 @@ bool UAACopyBuildingsComponent::ValidateObject(UObject* obj)
                         if (!name.StartsWith(GetWorld()->GetPathName())) continue;
 
                         bool propertyElementValid = false;
-                        for (AFGBuildable* otherBuilding : this->mOriginalBuildings)
+                        for (AFGBuildable* otherBuilding : this->OriginalBuildings)
                         {
                             if (name.Contains(*(otherBuilding->GetPathName() + ".")) || value == otherBuilding)
                             {
@@ -169,7 +188,7 @@ bool UAACopyBuildingsComponent::ValidateObject(UObject* obj)
                         if (!name.StartsWith(GetWorld()->GetPathName())) continue;
 
                         bool propertyElementValid = false;
-                        for (AFGBuildable* otherBuilding : this->mOriginalBuildings)
+                        for (AFGBuildable* otherBuilding : this->OriginalBuildings)
                         {
                             if (name.Contains(*(otherBuilding->GetPathName() + ".")) || value == otherBuilding)
                             {
@@ -213,7 +232,7 @@ bool UAACopyBuildingsComponent::ValidateObject(UObject* obj)
                     if (!name.StartsWith(GetWorld()->GetPathName())) continue;
 
                     bool propertyElementValid = false;
-                    for (AFGBuildable* otherBuilding : this->mOriginalBuildings)
+                    for (AFGBuildable* otherBuilding : this->OriginalBuildings)
                     {
                         if (name.Contains(*(otherBuilding->GetPathName() + ".")) || value == otherBuilding)
                         {
@@ -237,13 +256,87 @@ bool UAACopyBuildingsComponent::ValidateObject(UObject* obj)
     return true;
 }
 
-bool UAACopyBuildingsComponent::ValidateBuildings(TArray<AFGBuildable*>& out_buildingsWithIssues)
+void UAACopyBuildingsComponent::CalculateBounds()
 {
-    for (AFGBuildable* buildable : this->mOriginalBuildings)
+    TMap<float, uint32> RotationCount;
+    for(AActor* actor : this->OriginalBuildings)
+        RotationCount.FindOrAdd(FGenericPlatformMath::Fmod(FGenericPlatformMath::Fmod(actor->GetActorRotation().Yaw, 90) + 90, 90))++;
+
+    RotationCount.ValueSort([](const uint32& A, const uint32& B) {
+        return A > B;
+    });
+
+    const FRotator Rotation = FRotator(0, (*RotationCount.CreateIterator()).Key, 0);
+
+    FVector Min = FVector(TNumericLimits<float>::Max());
+    FVector Max = FVector(-TNumericLimits<float>::Max());
+    
+    for(AFGBuildable* buildable : this->OriginalBuildings)
+    {
+        if(UShapeComponent* Clearance = buildable->GetClearanceComponent())
+        {
+            if(UBoxComponent* Box = Cast<UBoxComponent>(Clearance))
+            {
+                const FVector Extents = Box->GetScaledBoxExtent();
+                for(int i = 0; i < (1 << 3); i++)
+                {
+                    const int X = (i & 1) ? 1 : -1;
+                    const int Y = (i & 2) ? 1 : -1;
+                    const int Z = (i & 4) ? 1 : -1;
+                    FVector Corner = FVector(Extents.X * X, Extents.Y * Y, Extents.Z * Z);
+                    Min = Min.ComponentMin(Rotation.UnrotateVector(buildable->GetActorRotation().RotateVector(Box->GetComponentTransform().GetLocation() + Corner - buildable->GetActorLocation()) + buildable->GetActorLocation()));
+                    Max = Max.ComponentMax(Rotation.UnrotateVector(buildable->GetActorRotation().RotateVector(Box->GetComponentTransform().GetLocation() + Corner - buildable->GetActorLocation()) + buildable->GetActorLocation()));
+                }
+            }
+            else
+            {
+                // Are there any other types used as clearance?
+            }
+        }
+        else
+        {
+            FActorSpawnParameters params;
+            params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+            params.bDeferConstruction = true;
+            AFGBuildable* previewBuilding = this->GetWorld()->SpawnActor<AFGBuildable>(
+                buildable->GetClass(), FTransform::Identity, params);
+            previewBuilding->bDeferBeginPlay = true;
+            previewBuilding->FinishSpawning(FTransform::Identity, true);
+            FVector Origin;
+            FVector Extents;
+            previewBuilding->GetActorBounds(true, Origin, Extents);
+            Extents = FVector(FGenericPlatformMath::RoundToFloat(Extents.X), FGenericPlatformMath::RoundToFloat(Extents.Y), FGenericPlatformMath::RoundToFloat(Extents.Z));
+
+            for(int i = 0; i < (1 << 3); i++)
+            {
+                const int X = (i & 1) ? 1 : -1;
+                const int Y = (i & 2) ? 1 : -1;
+                const int Z = (i & 4) ? 1 : -1;
+                FVector Corner = FVector(Extents.X * X, Extents.Y * Y, Extents.Z * Z);
+                Min = Min.ComponentMin(Rotation.UnrotateVector(buildable->GetActorLocation() + buildable->GetActorRotation().RotateVector(Origin + Corner)));
+                Max = Max.ComponentMax(Rotation.UnrotateVector(buildable->GetActorLocation() + buildable->GetActorRotation().RotateVector(Origin + Corner)));
+            }
+            previewBuilding->Destroy();
+        }
+    }
+
+    Min = Rotation.RotateVector(Min);
+    Max = Rotation.RotateVector(Max);
+
+    const FVector Center = (Min + Max) / 2;
+
+    const FVector Bounds = Rotation.UnrotateVector(Max - Center);
+            
+    this->BuildingsBounds = FRotatedBoundingBox{Center, FVector(FGenericPlatformMath::RoundToFloat(Bounds.X), FGenericPlatformMath::RoundToFloat(Bounds.Y), FGenericPlatformMath::RoundToFloat(Bounds.Z)), Rotation};
+}
+
+bool UAACopyBuildingsComponent::ValidateBuildings(TArray<AFGBuildable*>& OutBuildingsWithIssues)
+{
+    for (AFGBuildable* buildable : this->OriginalBuildings)
     {
         if (!ValidateObject(buildable))
         {
-            out_buildingsWithIssues.Add(buildable);
+            OutBuildingsWithIssues.Add(buildable);
             continue;
         }
         bool componentsValid = true;
@@ -257,10 +350,10 @@ bool UAACopyBuildingsComponent::ValidateBuildings(TArray<AFGBuildable*>& out_bui
         }
         if (!componentsValid)
         {
-            out_buildingsWithIssues.Add(buildable);
+            OutBuildingsWithIssues.Add(buildable);
         }
     }
-    return out_buildingsWithIssues.Num() == 0;
+    return OutBuildingsWithIssues.Num() == 0;
 }
 
 void CopyBySerialization(UObject* from, UObject* to)
@@ -294,8 +387,8 @@ T* GetObjectReplaceReference(T* Obj, T* From, T* To)
     return FindObject<T>(nullptr, *newName);
 }
 
-void UAACopyBuildingsComponent::FixReferencesToBuilding(UObject* from, UObject* to, UObject* referenceFrom,
-                                                        UObject* referenceTo) const
+void FixReferencesToBuilding(UObject* from, UObject* to, UObject* referenceFrom,
+                                                        UObject* referenceTo)
 {
     for (TFieldIterator<UObjectPropertyBase> PropertyIterator(from->GetClass()); PropertyIterator; ++PropertyIterator)
     {
@@ -448,45 +541,51 @@ void PreSaveGame(UObject* object)
             FEngineVersion::Current().GetChangelist());
 }
 
-void PostSaveGame(UObject* object)
+void PostSaveGame(UObject* Object)
 {
-    if (object->Implements<UFGSaveInterface>())
+    if (Object->Implements<UFGSaveInterface>())
         IFGSaveInterface::Execute_PostSaveGame(
-            object, UFGSaveSession::GetVersion(UFGSaveSession::Get(object->GetWorld())->mSaveHeader),
+            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
             FEngineVersion::Current().GetChangelist());
 }
 
-void PreLoadGame(UObject* object)
+void PreLoadGame(UObject* Object)
 {
-    if (object->Implements<UFGSaveInterface>())
+    if (Object->Implements<UFGSaveInterface>())
         IFGSaveInterface::Execute_PreLoadGame(
-            object, UFGSaveSession::GetVersion(UFGSaveSession::Get(object->GetWorld())->mSaveHeader),
+            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
             FEngineVersion::Current().GetChangelist());
 }
 
-void PostLoadGame(UObject* object)
+void PostLoadGame(UObject* Object)
 {
-    if (object->Implements<UFGSaveInterface>())
+    if (Object->Implements<UFGSaveInterface>())
         IFGSaveInterface::Execute_PostLoadGame(
-            object, UFGSaveSession::GetVersion(UFGSaveSession::Get(object->GetWorld())->mSaveHeader),
+            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
             FEngineVersion::Current().GetChangelist());
 }
 
-int UAACopyBuildingsComponent::AddCopy(FVector offset, FRotator rotation)
+FTransform TransformAroundPoint(const FTransform Original, const FVector Offset, const FRotator Rotation, const FVector RotationCenter)
 {
-    for (AFGBuildable* buildable : this->mOriginalBuildings)
+    const FVector NewLocation = Rotation.RotateVector(Original.GetLocation() - RotationCenter) + RotationCenter + Offset;
+    const FRotator NewRotation = Original.Rotator() + Rotation;
+    return FTransform(NewRotation, NewLocation, Original.GetScale3D());
+}
+
+int UAACopyBuildingsComponent::AddCopy(const FVector Offset, const FRotator Rotation, const FVector RotationCenter, const bool Relative)
+{
+    for (AFGBuildable* buildable : this->OriginalBuildings)
     {
-        FVector newLocation = buildable->GetActorLocation() + offset;
-        FRotator newRotation = buildable->GetActorRotation() + rotation;
+        FTransform newTransform = TransformAroundPoint(buildable->GetActorTransform(), Relative ? BuildingsBounds.Rotation.RotateVector(Offset) : Offset, Rotation, RotationCenter);
         // TODO: rotation around a point
         FActorSpawnParameters params;
         params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
         params.bDeferConstruction = true;
         AFGBuildable* previewBuilding = this->GetWorld()->SpawnActor<AFGBuildable>(
-            buildable->GetClass(), FTransform(newRotation, newLocation, buildable->GetActorScale3D()), params);
+            buildable->GetClass(), newTransform, params);
         previewBuilding->bDeferBeginPlay = true;
         previewBuilding->FinishSpawning(FTransform::Identity, true);
-        this->mBuildingsPreview.FindOrAdd(buildable).mBuildings.Add(mCurrentId, previewBuilding);
+        this->BuildingsPreview.FindOrAdd(buildable).Buildings.Add(CurrentId, previewBuilding);
 
         for (UActorComponent* newComponent : previewBuilding->GetComponents())
             PreLoadGame(newComponent);
@@ -496,10 +595,10 @@ int UAACopyBuildingsComponent::AddCopy(FVector offset, FRotator rotation)
             PreSaveGame(component);
         PreSaveGame(buildable);
     }
-    for (int i = 0; i < this->mOriginalBuildings.Num(); i++)
+    for (int i = 0; i < this->OriginalBuildings.Num(); i++)
     {
-        AFGBuildable* buildable = this->mOriginalBuildings[i];
-        AFGBuildable* previewBuilding = this->mBuildingsPreview.Find(buildable)->mBuildings[mCurrentId];
+        AFGBuildable* buildable = this->OriginalBuildings[i];
+        AFGBuildable* previewBuilding = this->BuildingsPreview.Find(buildable)->Buildings[CurrentId];
 
         CopyBySerialization(buildable, previewBuilding);
 
@@ -531,14 +630,14 @@ int UAACopyBuildingsComponent::AddCopy(FVector offset, FRotator rotation)
         }
     }
 
-    for (int i = 0; i < this->mOriginalBuildings.Num(); i++)
+    for (int i = 0; i < this->OriginalBuildings.Num(); i++)
     {
-        AFGBuildable* buildable = this->mOriginalBuildings[i];
-        AFGBuildable* previewBuilding = this->mBuildingsPreview.Find(buildable)->mBuildings[mCurrentId];
-        for (int j = 0; j < this->mOriginalBuildings.Num(); j++)
+        AFGBuildable* buildable = this->OriginalBuildings[i];
+        AFGBuildable* previewBuilding = this->BuildingsPreview.Find(buildable)->Buildings[CurrentId];
+        for (int j = 0; j < this->OriginalBuildings.Num(); j++)
         {
-            AFGBuildable* otherBuildable = this->mOriginalBuildings[j];
-            AFGBuildable* otherPreviewBuilding = this->mBuildingsPreview.Find(otherBuildable)->mBuildings[mCurrentId];
+            AFGBuildable* otherBuildable = this->OriginalBuildings[j];
+            AFGBuildable* otherPreviewBuilding = this->BuildingsPreview.Find(otherBuildable)->Buildings[CurrentId];
             FixReferencesToBuilding(otherBuildable, otherPreviewBuilding, buildable, previewBuilding);
 
             for (UActorComponent* component : otherBuildable->GetComponents())
@@ -567,10 +666,10 @@ int UAACopyBuildingsComponent::AddCopy(FVector offset, FRotator rotation)
         }
     }
 
-    for (int i = 0; i < this->mOriginalBuildings.Num(); i++)
+    for (int i = 0; i < this->OriginalBuildings.Num(); i++)
     {
-        AFGBuildable* buildable = this->mOriginalBuildings[i];
-        AFGBuildable* previewBuilding = this->mBuildingsPreview.Find(buildable)->mBuildings[mCurrentId];
+        AFGBuildable* buildable = this->OriginalBuildings[i];
+        AFGBuildable* previewBuilding = this->BuildingsPreview.Find(buildable)->Buildings[CurrentId];
         for (UActorComponent* newComponent : previewBuilding->GetComponents())
             PostLoadGame(newComponent);
         PostLoadGame(previewBuilding);
@@ -580,10 +679,10 @@ int UAACopyBuildingsComponent::AddCopy(FVector offset, FRotator rotation)
         PostSaveGame(buildable);
     }
 
-    for (int i = 0; i < this->mOriginalBuildings.Num(); i++)
+    for (int i = 0; i < this->OriginalBuildings.Num(); i++)
     {
-        AFGBuildable* buildable = this->mOriginalBuildings[i];
-        AFGBuildable* previewBuilding = this->mBuildingsPreview.Find(buildable)->mBuildings[mCurrentId];
+        AFGBuildable* buildable = this->OriginalBuildings[i];
+        AFGBuildable* previewBuilding = this->BuildingsPreview.Find(buildable)->Buildings[CurrentId];
         previewBuilding->DeferredBeginPlay();
         TArray<UFGColoredInstanceMeshProxy*> ColoredInstanceMeshProxies;
         previewBuilding->GetComponents<UFGColoredInstanceMeshProxy>(ColoredInstanceMeshProxies);
@@ -596,29 +695,28 @@ int UAACopyBuildingsComponent::AddCopy(FVector offset, FRotator rotation)
                 Mesh->SetMaterial(MatNum, UFGFactorySettings::Get()->mDefaultValidPlacementMaterial);
         }
     }
-    return mCurrentId++;
+    return CurrentId++;
 }
 
-void UAACopyBuildingsComponent::MoveCopy(int copyId, FVector offset, FRotator rotation)
+void UAACopyBuildingsComponent::MoveCopy(const int CopyId, const FVector Offset, const FRotator Rotation, const FVector RotationCenter, const bool Relative)
 {
-    for (AFGBuildable* buildable : this->mOriginalBuildings)
+    for (AFGBuildable* buildable : this->OriginalBuildings)
     {
-        FVector newLocation = buildable->GetActorLocation() + offset;
-        FRotator newRotation = buildable->GetActorRotation() + rotation;
-        AFGBuildable* previewBuilding = this->mBuildingsPreview[buildable].mBuildings[copyId];
+        FTransform newTransform = TransformAroundPoint(buildable->GetActorTransform(), Relative ? BuildingsBounds.Rotation.RotateVector(Offset) : Offset, Rotation, RotationCenter);
+        AFGBuildable* previewBuilding = this->BuildingsPreview[buildable].Buildings[CopyId];
         const EComponentMobility::Type CurrentMobility = previewBuilding->GetRootComponent()->Mobility;
         previewBuilding->GetRootComponent()->SetMobility(EComponentMobility::Movable);
-        previewBuilding->SetActorTransform(FTransform(newRotation, newLocation, buildable->GetActorScale3D()));
+        previewBuilding->SetActorTransform(newTransform);
         previewBuilding->GetRootComponent()->SetMobility(CurrentMobility);
     }
 }
 
-void UAACopyBuildingsComponent::RemoveCopy(int copyId)
+void UAACopyBuildingsComponent::RemoveCopy(int CopyId)
 {
-    for (AFGBuildable* buildable : this->mOriginalBuildings)
+    for (AFGBuildable* buildable : this->OriginalBuildings)
     {
-        AFGBuildable* previewBuilding = this->mBuildingsPreview[buildable].mBuildings[copyId];
-        this->mBuildingsPreview[buildable].mBuildings.Remove(copyId);
+        AFGBuildable* previewBuilding = this->BuildingsPreview[buildable].Buildings[CopyId];
+        this->BuildingsPreview[buildable].Buildings.Remove(CopyId);
         previewBuilding->Destroy();
     }
 }
@@ -626,10 +724,10 @@ void UAACopyBuildingsComponent::RemoveCopy(int copyId)
 void UAACopyBuildingsComponent::Finish()
 {
     TArray<AFGBuildable*> previewBuildingKeys;
-    this->mBuildingsPreview.GetKeys(previewBuildingKeys);
+    this->BuildingsPreview.GetKeys(previewBuildingKeys);
     for (AFGBuildable* buildable : previewBuildingKeys)
     {
-        for (const auto Preview : this->mBuildingsPreview[buildable].mBuildings)
+        for (const auto Preview : this->BuildingsPreview[buildable].Buildings)
         {
             AFGBuildable* previewBuilding = Preview.Value;
             TArray<UFGColoredInstanceMeshProxy*> ColoredInstanceMeshProxies;

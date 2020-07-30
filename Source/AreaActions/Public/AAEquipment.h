@@ -121,7 +121,7 @@ private:
 	UPROPERTY()
 	AAAHeightIndicator* mBottomIndicator;
 
-private:
+public:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AAACornerIndicator> CornerIndicatorClass;
 
