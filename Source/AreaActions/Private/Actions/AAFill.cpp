@@ -50,9 +50,9 @@ void AAAFill::Preview()
         if(Count.X.Reversed)
             Offset.X = -Offset.X;
         if(Count.Y.Reversed)
-            Offset.X = -Offset.Y;
+            Offset.Y = -Offset.Y;
         if(Count.Z.Reversed)
-            Offset.X = -Offset.Z;
+            Offset.Z = -Offset.Z;
         if(!CopyId.Contains(CopyNumber))
             CopyId.Add(CopyNumber, this->CopyBuildingsComponent->AddCopy(Offset, FRotator::ZeroRotator));
         else
