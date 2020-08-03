@@ -28,15 +28,15 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void SecondaryFire();
 
-	FORCEINLINE void SetActors(TArray<AActor*> actors) { this->mActors = actors; }
-	FORCEINLINE void SetAAEquipment(class AAAEquipment* equipment) { this->mAAEquipment = equipment; }
+	FORCEINLINE void SetActors(const TArray<AActor*> Actors) { this->Actors = Actors; }
+	FORCEINLINE void SetAAEquipment(class AAAEquipment* Equipment) { this->AAEquipment = Equipment; }
 public:
 	UPROPERTY(BlueprintReadOnly)
-	class AAAEquipment* mAAEquipment;
+	class AAAEquipment* AAEquipment;
 
 protected:
 	UPROPERTY(BlueprintReadOnly)
-	TArray<AActor*> mActors;
+	TArray<AActor*> Actors;
 
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Action")

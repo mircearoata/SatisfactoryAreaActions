@@ -2,13 +2,13 @@
 
 #include "AAHeightIndicator.h"
 
-void AAAHeightIndicator::UpdateHeight(float minHeight, float maxHeight) {
-	FVector newLocation = this->GetActorLocation();
-	if (this->mIndicatorType == HIT_TOP) {
-		newLocation.Z = maxHeight;
+void AAAHeightIndicator::UpdateHeight(const float MinHeight, const float MaxHeight) {
+	FVector NewLocation = this->GetActorLocation();
+	if (this->IndicatorType == Top) {
+		NewLocation.Z = MaxHeight;
 	}
-	else if (this->mIndicatorType == HIT_BOTTOM) {
-		newLocation.Z = minHeight;
+	else if (this->IndicatorType == Bottom) {
+		NewLocation.Z = MinHeight;
 	}
-	this->SetActorLocation(newLocation);
+	this->SetActorLocation(NewLocation);
 }

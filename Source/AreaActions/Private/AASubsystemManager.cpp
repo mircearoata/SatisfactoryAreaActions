@@ -7,16 +7,16 @@ bool AAASubsystemManager::ShouldSave_Implementation() const {
 	return true;
 }
 
-void AAASubsystemManager::GatherDependencies_Implementation(TArray< UObject* >& out_dependentObjects) {
-	out_dependentObjects.Add(mSavedSubsystem);
+void AAASubsystemManager::GatherDependencies_Implementation(TArray< UObject* >& OutDependentObjects) {
+	OutDependentObjects.Add(SavedSubsystem);
 }
 
 void AAASubsystemManager::BeginPlay() {
-	if (!mSavedSubsystem) {
-		mSavedSubsystem = GetWorld()->SpawnActor<AAASavedSubsystem>(SavedSubsystemClass, FVector::ZeroVector, FRotator::ZeroRotator);
+	if (!SavedSubsystem) {
+		SavedSubsystem = GetWorld()->SpawnActor<AAASavedSubsystem>(SavedSubsystemClass, FVector::ZeroVector, FRotator::ZeroRotator);
 	}
-	if (!mActionsManager) {
-		mActionsManager = GetWorld()->SpawnActor<AAAActionsManager>(ActionsManagerClass, FVector::ZeroVector, FRotator::ZeroRotator);
+	if (!ActionsManager) {
+		ActionsManager = GetWorld()->SpawnActor<AAAActionsManager>(ActionsManagerClass, FVector::ZeroVector, FRotator::ZeroRotator);
 	}
 }
 

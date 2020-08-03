@@ -23,8 +23,8 @@ public:
 
 public:
 	UPROPERTY(BlueprintReadWrite, SaveGame)
-	bool mIsFlying = false;
+	bool IsFlying = false;
 
 	UPROPERTY(BlueprintReadWrite, SaveGame)
-	float mMaxContainerDistance = 50000.0;
+	float MaxContainerDistance = 50000.0;
 };

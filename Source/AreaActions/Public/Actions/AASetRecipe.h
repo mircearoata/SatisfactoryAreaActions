@@ -17,5 +17,5 @@ class AREAACTIONS_API AAASetRecipe : public AAAAction
 
 public:
 	UFUNCTION(BlueprintCallable)
-	void SetRecipe(TSubclassOf<UFGRecipe> selectedRecipe);
+	void SetRecipe(TSubclassOf<UFGRecipe> SelectedRecipe);
 };

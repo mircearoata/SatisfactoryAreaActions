@@ -13,25 +13,25 @@ AAACopy::AAACopy() {
 }
 
 void AAACopy::Run_Implementation() {
-	TArray<AFGBuildable*> buildingsWithIssues;
-	if (!this->CopyBuildingsComponent->SetActors(this->mActors, buildingsWithIssues)) {
-		TArray<AActor*> asActors;
-		for (AFGBuildable* building : buildingsWithIssues) {
-			asActors.Add(building);
+	TArray<AFGBuildable*> BuildingsWithIssues;
+	if (!this->CopyBuildingsComponent->SetActors(this->Actors, BuildingsWithIssues)) {
+		TArray<AActor*> AsActors;
+		for (AFGBuildable* Building : BuildingsWithIssues) {
+			AsActors.Add(Building);
 		}
-		UFGOutlineComponent::Get(GetWorld())->ShowDismantlePendingMaterial(asActors);
-		FOnMessageOk messageOk;
-		messageOk.BindDynamic(this, &AAACopy::Done);
-		FText message = FText::FromString(TEXT("Some buildings cannot be copied because they have connections to buildings outside the selected area. Remove the connections temporary, or include the connected buildings in the area. The buildings are highlighted."));
-		this->mAAEquipment->ShowMessageOkDelegate(ActionName, message, messageOk);
+		UFGOutlineComponent::Get(GetWorld())->ShowDismantlePendingMaterial(AsActors);
+		FOnMessageOk MessageOk;
+		MessageOk.BindDynamic(this, &AAACopy::Done);
+		const FText Message = FText::FromString(TEXT("Some buildings cannot be copied because they have connections to buildings outside the selected area. Remove the connections temporary, or include the connected buildings in the area. The buildings are highlighted."));
+		this->AAEquipment->ShowMessageOkDelegate(ActionName, Message, MessageOk);
 	}
 	else {
-		this->SetDelta(FVector(0, 0, 1000), FRotator::ZeroRotator, FVector::ZeroVector);
+		this->SetDelta(FVector(0, 0, 1000), FRotator::ZeroRotator, FVector::ZeroVector, false);
 		this->Preview();
 		FTimerDelegate TimerCallback;
 		TimerCallback.BindLambda([=]()
         {
-			this->SetDelta(FVector(0, 1000, 1000), FRotator(0, 45, 0), FVector::ZeroVector);
+			this->SetDelta(FVector(0, 1000, 1000), FRotator(0, 45, 0), FVector::ZeroVector, false);
 			this->Preview();
 			this->Finish();
         });
@@ -44,9 +44,9 @@ void AAACopy::Run_Implementation() {
 void AAACopy::Preview()
 {
 	if(!PreviewExists)
-		this->CopyBuildingsComponent->AddCopy(DeltaPosition, DeltaRotation);
+		this->CopyBuildingsComponent->AddCopy(DeltaPosition, DeltaRotation, IsRotationCenterSet ? RotationCenter : CopyBuildingsComponent->GetBuildingsCenter());
 	else
-		this->CopyBuildingsComponent->MoveCopy(0, DeltaPosition, DeltaRotation);
+		this->CopyBuildingsComponent->MoveCopy(0, DeltaPosition, DeltaRotation, IsRotationCenterSet ? RotationCenter : CopyBuildingsComponent->GetBuildingsCenter());
 	PreviewExists = true;
 }
 

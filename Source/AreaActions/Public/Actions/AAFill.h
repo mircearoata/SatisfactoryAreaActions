@@ -11,7 +11,7 @@ USTRUCT(BlueprintType)
 struct FFillAxis
 {
     GENERATED_BODY()
-    FFillAxis(int32 InAmount, bool InReversed): Amount(InAmount), Reversed(InReversed) {}
+    FFillAxis(const int32 InAmount, const bool InReversed): Amount(InAmount), Reversed(InReversed) {}
     FFillAxis() { Amount = 1; Reversed = false; }
 
     int32 Amount;
@@ -24,7 +24,7 @@ USTRUCT(BlueprintType)
 struct FFillCount
 {
     GENERATED_BODY()
-    FFillCount(FFillAxis InX, FFillAxis InY, FFillAxis InZ): X(InX), Y(InY), Z(InZ) {}
+    FFillCount(const FFillAxis InX, const FFillAxis InY, const FFillAxis InZ): X(InX), Y(InY), Z(InZ) {}
     FFillCount(): X(FFillAxis::None), Y(FFillAxis::None), Z(FFillAxis::None) {}
     
     FFillAxis X;
@@ -42,10 +42,10 @@ class AREAACTIONS_API AAAFill : public AAAAction
 
 public:
     AAAFill();
-    void Run_Implementation() override;
+    virtual void Run_Implementation() override;
     
     UFUNCTION(BlueprintCallable)
-    void SetSettings(FFillCount NewCount, FVector NewBorder, FVector NewRamp)
+    void SetSettings(const FFillCount NewCount, const FVector NewBorder, const FVector NewRamp)
     {
         this->Count = NewCount;
         this->Border = NewBorder;

@@ -26,7 +26,7 @@ public:
 
 protected:
 	UPROPERTY(BlueprintReadOnly)
-	TArray<FInventoryStack> mRefunds;
+	TArray<FInventoryStack> Refunds;
 
 private:
 	UPROPERTY(EditDefaultsOnly)

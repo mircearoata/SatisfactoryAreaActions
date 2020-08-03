@@ -8,17 +8,17 @@ AAAFill::AAAFill() {
 }
 
 void AAAFill::Run_Implementation() {
-    TArray<AFGBuildable*> buildingsWithIssues;
-    if (!this->CopyBuildingsComponent->SetActors(this->mActors, buildingsWithIssues)) {
-        TArray<AActor*> asActors;
-        for (AFGBuildable* building : buildingsWithIssues) {
-            asActors.Add(building);
+    TArray<AFGBuildable*> BuildingsWithIssues;
+    if (!this->CopyBuildingsComponent->SetActors(this->Actors, BuildingsWithIssues)) {
+        TArray<AActor*> AsActors;
+        for (AFGBuildable* Building : BuildingsWithIssues) {
+            AsActors.Add(Building);
         }
-        UFGOutlineComponent::Get(GetWorld())->ShowDismantlePendingMaterial(asActors);
-        FOnMessageOk messageOk;
-        messageOk.BindDynamic(this, &AAAFill::Done);
-        FText message = FText::FromString(TEXT("Some buildings cannot be copied because they have connections to buildings outside the selected area. Remove the connections temporary, or include the connected buildings in the area. The buildings are highlighted."));
-        this->mAAEquipment->ShowMessageOkDelegate(ActionName, message, messageOk);
+        UFGOutlineComponent::Get(GetWorld())->ShowDismantlePendingMaterial(AsActors);
+        FOnMessageOk MessageOk;
+        MessageOk.BindDynamic(this, &AAAFill::Done);
+        const FText Message = FText::FromString(TEXT("Some buildings cannot be copied because they have connections to buildings outside the selected area. Remove the connections temporary, or include the connected buildings in the area. The buildings are highlighted."));
+        this->AAEquipment->ShowMessageOkDelegate(ActionName, Message, MessageOk);
     }
     else {
         this->AreaSize = this->CopyBuildingsComponent->GetBounds().Extents * 2;

@@ -57,7 +57,7 @@ public:
 	void Finish();
 
 private:
-	bool ValidateObject(UObject* Buildable);
+	bool ValidateObject(UObject* Object);
 
 	void CalculateBounds();
 private:

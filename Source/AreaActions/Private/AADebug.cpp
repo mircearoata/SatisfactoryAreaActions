@@ -3,7 +3,7 @@
 #include "AACornerIndicator.h"
 #include "util/Logging.h"
 
-AAACornerIndicator* AAADebug::AddDebugIndicator(UWorld* World, FVector Location)
+AAACornerIndicator* AAADebug::AddDebugIndicator(UWorld* World, const FVector Location)
 {
    const TSubclassOf<AAACornerIndicator> DebugIndicator = DebugIndicatorClass.TryLoadClass<AAACornerIndicator>();
    if(!DebugIndicator)

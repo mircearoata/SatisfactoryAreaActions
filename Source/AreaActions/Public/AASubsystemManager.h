@@ -18,23 +18,23 @@ class AREAACTIONS_API AAASubsystemManager : public AInfo, public IFGSaveInterfac
 	GENERATED_BODY()
 
 public:
-	void BeginPlay() override;
+	virtual void BeginPlay() override;
 
 	virtual bool ShouldSave_Implementation() const override;
-	virtual void GatherDependencies_Implementation(TArray< UObject* >& out_dependentObjects) override;
+	virtual void GatherDependencies_Implementation(TArray< UObject* >& OutDependentObjects) override;
 
 	UFUNCTION(BlueprintPure, DisplayName = "GetAASubsystemManager", Meta = (DefaultToSelf = "WorldContextObject"))
 	static AAASubsystemManager* Get(UObject* WorldContextObject);
 
-	FORCEINLINE AAASavedSubsystem* GetSavedSubsystem() { return mSavedSubsystem; }
-	FORCEINLINE AAAActionsManager* GetActionsManager() { return mActionsManager; }
+	FORCEINLINE AAASavedSubsystem* GetSavedSubsystem() const { return SavedSubsystem; }
+	FORCEINLINE AAAActionsManager* GetActionsManager() const { return ActionsManager; }
 
 private:
 	UPROPERTY(SaveGame)
-	AAASavedSubsystem* mSavedSubsystem;
+	AAASavedSubsystem* SavedSubsystem;
 
 	UPROPERTY(SaveGame)
-	AAAActionsManager* mActionsManager;
+	AAAActionsManager* ActionsManager;
 
 private:
 	UPROPERTY(EditDefaultsOnly)

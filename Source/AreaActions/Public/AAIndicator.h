@@ -13,5 +13,5 @@ class AREAACTIONS_API AAAIndicator : public AActor
 	GENERATED_BODY()
 	
 public:
-	virtual void UpdateHeight(float minHeight, float maxHeight);
+	virtual void UpdateHeight(float MinHeight, float MaxHeight);
 };

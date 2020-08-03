@@ -20,7 +20,13 @@ public:
 	virtual void Run_Implementation() override;
 
 	UFUNCTION(BlueprintCallable)
-	void SetDelta(const FVector InDeltaPosition, const FRotator InDeltaRotation, FVector InRotationCenter) { this->DeltaPosition = InDeltaPosition; this->DeltaRotation = InDeltaRotation; }
+	void SetDelta(const FVector InDeltaPosition, const FRotator InDeltaRotation, const FVector InRotationCenter, const bool InIsRotationCenterSet)
+	{
+		this->DeltaPosition = InDeltaPosition;
+		this->DeltaRotation = InDeltaRotation;
+		this->RotationCenter = InRotationCenter;
+		this->IsRotationCenterSet = InIsRotationCenterSet;
+	}
 	
 	UFUNCTION(BlueprintCallable)
 	void Preview();
@@ -33,6 +39,8 @@ private:
 
 	FVector DeltaPosition;
 	FRotator DeltaRotation;
+	FVector RotationCenter;
+	bool IsRotationCenterSet;
 
 	bool PreviewExists;
 };

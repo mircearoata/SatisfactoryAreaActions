@@ -8,8 +8,8 @@
 
 UENUM()
 enum EAAHeightIndicatorType {
-	HIT_TOP,
-	HIT_BOTTOM
+	Top,
+	Bottom
 };
 
 /**
@@ -21,10 +21,10 @@ class AREAACTIONS_API AAAHeightIndicator : public AAAIndicator
 	GENERATED_BODY()
 
 public:
-	FORCEINLINE void SetIndicatorType(EAAHeightIndicatorType type) { this->mIndicatorType = type; }
+	FORCEINLINE void SetIndicatorType(const EAAHeightIndicatorType Type) { this->IndicatorType = Type; }
 
-	void UpdateHeight(float minHeight, float maxHeight) override;
+	virtual void UpdateHeight(float MinHeight, float MaxHeight) override;
 
 private:
-	EAAHeightIndicatorType mIndicatorType;
+	EAAHeightIndicatorType IndicatorType;
 };

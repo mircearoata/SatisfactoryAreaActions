@@ -8,86 +8,86 @@
 #include "GenericPlatform/GenericPlatformMath.h"
 
 AAAEquipment::AAAEquipment() : Super() {
-	this->mSelectionMode = SM_CORNER;
-	this->mAreaMinZ = MinZ;
-	this->mAreaMaxZ = MaxZ;
+	this->SelectionMode = SM_Corner;
+	this->AreaMinZ = MinZ;
+	this->AreaMaxZ = MaxZ;
 }
 
 void AAAEquipment::BeginPlay() {
-	this->mBottomIndicator = GetWorld()->SpawnActor<AAAHeightIndicator>(HeightIndicatorClass, FVector(0, 0, this->mAreaMinZ), FRotator::ZeroRotator);
-	this->mBottomIndicator->SetIndicatorType(HIT_BOTTOM);
-	this->mTopIndicator = GetWorld()->SpawnActor<AAAHeightIndicator>(HeightIndicatorClass, FVector(0, 0, this->mAreaMaxZ), FRotator::ZeroRotator);
-	this->mTopIndicator->SetIndicatorType(HIT_TOP);
+	this->BottomIndicator = GetWorld()->SpawnActor<AAAHeightIndicator>(HeightIndicatorClass, FVector(0, 0, this->AreaMinZ), FRotator::ZeroRotator);
+	this->BottomIndicator->SetIndicatorType(Bottom);
+	this->TopIndicator = GetWorld()->SpawnActor<AAAHeightIndicator>(HeightIndicatorClass, FVector(0, 0, this->AreaMaxZ), FRotator::ZeroRotator);
+	this->TopIndicator->SetIndicatorType(Top);
 	this->UpdateHeight();
 }
 
-void AAAEquipment::Equip(class AFGCharacterPlayer* character) {
-	Super::Equip(character);
+void AAAEquipment::Equip(class AFGCharacterPlayer* Character) {
+	Super::Equip(Character);
 	this->DelayedUpdateExtraActors();
 }
 
 void AAAEquipment::UnEquip() {
 	Super::UnEquip();
-	if (this->mExtraActors.Num() > 0) {
+	if (this->ExtraActors.Num() > 0) {
 		UFGOutlineComponent::Get(GetWorld())->HideAllDismantlePendingMaterial();
 	}
 }
 
 void AAAEquipment::PrimaryFire() {
-	FHitResult hitResult;
-	switch (this->mSelectionMode) {
-	case SM_CORNER:
-		if (RaycastMouseWithRange(hitResult, false, true, true)) {
-			if (hitResult.Actor->IsA<AAACornerIndicator>()) {
-				AAACornerIndicator* hitCorner = (AAACornerIndicator*)hitResult.Actor.Get();
-				int cornerIdx = mCornerIndicators.Find(hitCorner);
-				this->RemoveCorner(cornerIdx);
+	FHitResult HitResult;
+	switch (this->SelectionMode) {
+	case SM_Corner:
+		if (RaycastMouseWithRange(HitResult, false, true, true)) {
+			if (HitResult.Actor->IsA<AAACornerIndicator>()) {
+				AAACornerIndicator* HitCorner = static_cast<AAACornerIndicator*>(HitResult.Actor.Get());
+				const int CornerIdx = CornerIndicators.Find(HitCorner);
+				this->RemoveCorner(CornerIdx);
 			}
 			else {
-				this->AddCorner(FVector2D(hitResult.Location.X, hitResult.Location.Y));
+				this->AddCorner(FVector2D(HitResult.Location.X, HitResult.Location.Y));
 			}
 		}
 		break;
-	case SM_BOTTOM:
-		if (RaycastMouseWithRange(hitResult, false, true, false)) {
-			if (hitResult.Actor == this->mBottomIndicator) {
-				this->mAreaMinZ = MinZ;
+	case SM_Bottom:
+		if (RaycastMouseWithRange(HitResult, false, true, false)) {
+			if (HitResult.Actor == this->BottomIndicator) {
+				this->AreaMinZ = MinZ;
 			}
 			else {
-				this->mAreaMinZ = hitResult.Location.Z;
-				if (this->mAreaMaxZ < this->mAreaMinZ) {
-					float tmp = this->mAreaMinZ;
-					this->mAreaMinZ = this->mAreaMaxZ;
-					this->mAreaMaxZ = tmp;
+				this->AreaMinZ = HitResult.Location.Z;
+				if (this->AreaMaxZ < this->AreaMinZ) {
+					const float Tmp = this->AreaMinZ;
+					this->AreaMinZ = this->AreaMaxZ;
+					this->AreaMaxZ = Tmp;
 				}
 			}
 			this->UpdateHeight();
 		}
 		break;
-	case SM_TOP:
-		if (RaycastMouseWithRange(hitResult, false, true, false)) {
-			if (hitResult.Actor == this->mTopIndicator) {
-				this->mAreaMaxZ = MaxZ;
+	case SM_Top:
+		if (RaycastMouseWithRange(HitResult, false, true, false)) {
+			if (HitResult.Actor == this->TopIndicator) {
+				this->AreaMaxZ = MaxZ;
 			}
 			else {
-				this->mAreaMaxZ = hitResult.Location.Z;
-				if (this->mAreaMaxZ < this->mAreaMinZ) {
-					float tmp = this->mAreaMinZ;
-					this->mAreaMinZ = this->mAreaMaxZ;
-					this->mAreaMaxZ = tmp;
+				this->AreaMaxZ = HitResult.Location.Z;
+				if (this->AreaMaxZ < this->AreaMinZ) {
+					const float Tmp = this->AreaMinZ;
+					this->AreaMinZ = this->AreaMaxZ;
+					this->AreaMaxZ = Tmp;
 				}
 			}
 			this->UpdateHeight();
 		}
 		break;
-	case SM_BUILDING:
-		if (RaycastMouseWithRange(hitResult, true, true, true)) {
-			if (hitResult.Actor->IsA<AFGBuildable>()) {
-				if (this->mExtraActors.Contains(hitResult.Actor.Get())) {
-					this->mExtraActors.Remove(hitResult.Actor.Get());
+	case SM_Building:
+		if (RaycastMouseWithRange(HitResult, true, true, true)) {
+			if (HitResult.Actor->IsA<AFGBuildable>()) {
+				if (this->ExtraActors.Contains(HitResult.Actor.Get())) {
+					this->ExtraActors.Remove(HitResult.Actor.Get());
 				}
 				else {
-					this->mExtraActors.Add(hitResult.Actor.Get());
+					this->ExtraActors.Add(HitResult.Actor.Get());
 				}
 				this->UpdateExtraActors();
 			}
@@ -111,225 +111,227 @@ void AAAEquipment::SelectMap() {
 }
 
 void AAAEquipment::ClearSelection() {
-	for (int i = this->mAreaCorners.Num() - 1; i >= 0; i--) {
+	for (int i = this->AreaCorners.Num() - 1; i >= 0; i--) {
 		this->RemoveCorner(i);
 	}
-	this->mAreaMinZ = MinZ;
-	this->mAreaMaxZ = MaxZ;
+	this->AreaMinZ = MinZ;
+	this->AreaMaxZ = MaxZ;
 	this->UpdateHeight();
-	this->mExtraActors.Empty();
+	this->ExtraActors.Empty();
 	this->UpdateExtraActors();
 }
 
 void AAAEquipment::UpdateHeight() {
-	for (AAACornerIndicator* indicator : this->mCornerIndicators) {
-		indicator->UpdateHeight(this->mAreaMinZ, this->mAreaMaxZ);
+	for (AAACornerIndicator* Indicator : this->CornerIndicators) {
+		Indicator->UpdateHeight(this->AreaMinZ, this->AreaMaxZ);
 	}
-	for (AAAWallIndicator* indicator : this->mWallIndicators) {
-		indicator->UpdateHeight(this->mAreaMinZ, this->mAreaMaxZ);
+	for (AAAWallIndicator* Indicator : this->WallIndicators) {
+		Indicator->UpdateHeight(this->AreaMinZ, this->AreaMaxZ);
 	}
-	this->mBottomIndicator->UpdateHeight(this->mAreaMinZ, this->mAreaMaxZ);
-	this->mBottomIndicator->SetActorHiddenInGame(this->mAreaMinZ == MinZ);
-	this->mTopIndicator->UpdateHeight(this->mAreaMinZ, this->mAreaMaxZ);
-	this->mTopIndicator->SetActorHiddenInGame(this->mAreaMaxZ == MaxZ);
+	this->BottomIndicator->UpdateHeight(this->AreaMinZ, this->AreaMaxZ);
+	this->BottomIndicator->SetActorHiddenInGame(this->AreaMinZ == MinZ);
+	this->TopIndicator->UpdateHeight(this->AreaMinZ, this->AreaMaxZ);
+	this->TopIndicator->SetActorHiddenInGame(this->AreaMaxZ == MaxZ);
 }
 
-AAAWallIndicator* AAAEquipment::CreateWallIndicator(FVector2D from, FVector2D to) {
-	FVector2D middle = (from + to) / 2;
-	float length = FVector::Dist(FVector(from, 0), FVector(to, 0));
-	float rotation = FVector((to - from), 0).Rotation().Yaw;
+AAAWallIndicator* AAAEquipment::CreateWallIndicator(const FVector2D From, const FVector2D To) const
+{
+	const FVector2D Middle = (From + To) / 2;
+	const float Length = FVector::Dist(FVector(From, 0), FVector(To, 0));
+	const float Rotation = FVector((To - From), 0).Rotation().Yaw;
 
-	AAAWallIndicator* indicator = GetWorld()->SpawnActor<AAAWallIndicator>(WallIndicatorClass, FVector(middle, 0), FRotator(0, rotation, 0));
-	indicator->SetActorScale3D(FVector(length, 1, 1));
-	indicator->UpdateHeight(this->mAreaMinZ, this->mAreaMaxZ);
-	return indicator;
+	AAAWallIndicator* Indicator = GetWorld()->SpawnActor<AAAWallIndicator>(WallIndicatorClass, FVector(Middle, 0), FRotator(0, Rotation, 0));
+	Indicator->SetActorScale3D(FVector(Length, 1, 1));
+	Indicator->UpdateHeight(this->AreaMinZ, this->AreaMaxZ);
+	return Indicator;
 }
 
-AAACornerIndicator* AAAEquipment::CreateCornerIndicator(FVector2D location) {
-	AAACornerIndicator* indicator = GetWorld()->SpawnActor<AAACornerIndicator>(CornerIndicatorClass, FVector(location, 0), FRotator::ZeroRotator);
-	indicator->UpdateHeight(this->mAreaMinZ, this->mAreaMaxZ);
-	return indicator;
+AAACornerIndicator* AAAEquipment::CreateCornerIndicator(const FVector2D Location) const
+{
+	AAACornerIndicator* Indicator = GetWorld()->SpawnActor<AAACornerIndicator>(CornerIndicatorClass, FVector(Location, 0), FRotator::ZeroRotator);
+	Indicator->UpdateHeight(this->AreaMinZ, this->AreaMaxZ);
+	return Indicator;
 }
 
-void AAAEquipment::AddCorner(FVector2D location) {
-	if(this->mWallIndicators.Num() > 1) {
-		AAAWallIndicator* wall2 = this->mWallIndicators[this->mWallIndicators.Num() - 1];
-		this->mWallIndicators.RemoveAt(this->mWallIndicators.Num() - 1);
-		wall2->Destroy();
+void AAAEquipment::AddCorner(const FVector2D Location) {
+	if(this->WallIndicators.Num() > 1) {
+		AAAWallIndicator* Wall = this->WallIndicators[this->WallIndicators.Num() - 1];
+		this->WallIndicators.RemoveAt(this->WallIndicators.Num() - 1);
+		Wall->Destroy();
 	}
 
-	this->mCornerIndicators.Add(CreateCornerIndicator(location));
+	this->CornerIndicators.Add(CreateCornerIndicator(Location));
 
-	if (this->mAreaCorners.Num() > 0) {
-		this->mWallIndicators.Add(CreateWallIndicator(this->mAreaCorners[this->mAreaCorners.Num() - 1], location));
+	if (this->AreaCorners.Num() > 0) {
+		this->WallIndicators.Add(CreateWallIndicator(this->AreaCorners[this->AreaCorners.Num() - 1], Location));
 	}
-	if(this->mAreaCorners.Num() > 1) {
-		this->mWallIndicators.Add(CreateWallIndicator(location, this->mAreaCorners[0]));
+	if(this->AreaCorners.Num() > 1) {
+		this->WallIndicators.Add(CreateWallIndicator(Location, this->AreaCorners[0]));
 	}
 
-	this->mAreaCorners.Add(location);
+	this->AreaCorners.Add(Location);
 }
 
-void AAAEquipment::RemoveCorner(int cornerIdx) {
-	AAACornerIndicator* corner = this->mCornerIndicators[cornerIdx];
-	this->mCornerIndicators.RemoveAt(cornerIdx);
-	corner->Destroy();
-	this->mAreaCorners.RemoveAt(cornerIdx);
+void AAAEquipment::RemoveCorner(const int CornerIdx) {
+	AAACornerIndicator* Corner = this->CornerIndicators[CornerIdx];
+	this->CornerIndicators.RemoveAt(CornerIdx);
+	Corner->Destroy();
+	this->AreaCorners.RemoveAt(CornerIdx);
 	
-	if (this->mWallIndicators.Num() > 0) {
-		AAAWallIndicator* wall = this->mWallIndicators[cornerIdx % this->mWallIndicators.Num()];
-		this->mWallIndicators.RemoveAt(cornerIdx % this->mWallIndicators.Num());
-		wall->Destroy();
+	if (this->WallIndicators.Num() > 0) {
+		AAAWallIndicator* Wall = this->WallIndicators[CornerIdx % this->WallIndicators.Num()];
+		this->WallIndicators.RemoveAt(CornerIdx % this->WallIndicators.Num());
+		Wall->Destroy();
 	}
-	if (this->mWallIndicators.Num() > 0) {
-		AAAWallIndicator* wall = this->mWallIndicators[(cornerIdx - 1 + this->mWallIndicators.Num()) % this->mWallIndicators.Num()];
-		this->mWallIndicators.RemoveAt((cornerIdx - 1 + this->mWallIndicators.Num()) % this->mWallIndicators.Num());
-		wall->Destroy();
+	if (this->WallIndicators.Num() > 0) {
+		AAAWallIndicator* Wall = this->WallIndicators[(CornerIdx - 1 + this->WallIndicators.Num()) % this->WallIndicators.Num()];
+		this->WallIndicators.RemoveAt((CornerIdx - 1 + this->WallIndicators.Num()) % this->WallIndicators.Num());
+		Wall->Destroy();
 	}
-	if (this->mAreaCorners.Num() > 2) {
-		this->mWallIndicators.Insert(CreateWallIndicator(
-				this->mAreaCorners[(cornerIdx - 1 + this->mAreaCorners.Num()) % this->mAreaCorners.Num()],
-				this->mAreaCorners[cornerIdx % this->mAreaCorners.Num()]),
-			(cornerIdx - 1 + this->mAreaCorners.Num()) % this->mAreaCorners.Num());
+	if (this->AreaCorners.Num() > 2) {
+		this->WallIndicators.Insert(CreateWallIndicator(
+				this->AreaCorners[(CornerIdx - 1 + this->AreaCorners.Num()) % this->AreaCorners.Num()],
+				this->AreaCorners[CornerIdx % this->AreaCorners.Num()]),
+			(CornerIdx - 1 + this->AreaCorners.Num()) % this->AreaCorners.Num());
 	}
 }
 
-bool AAAEquipment::RaycastMouseWithRange(FHitResult& out_hitResult, bool ignoreCornerIndicators, bool ignoreWallIndicators, bool ignoreHeightIndicators, TArray<AActor*> otherIgnoredActors) {
-	TArray<AActor*> ignoredActors;
+bool AAAEquipment::RaycastMouseWithRange(FHitResult& OutHitResult, const bool bIgnoreCornerIndicators, const bool bIgnoreWallIndicators, const bool bIgnoreHeightIndicators, const TArray<AActor*> OtherIgnoredActors) const
+{
+	TArray<AActor*> IgnoredActors;
 
-	if (ignoreCornerIndicators) {
-		ignoredActors.Append(this->mCornerIndicators);
+	if (bIgnoreCornerIndicators) {
+		IgnoredActors.Append(this->CornerIndicators);
 	}
-	if (ignoreWallIndicators) {
-		ignoredActors.Append(this->mWallIndicators);
+	if (bIgnoreWallIndicators) {
+		IgnoredActors.Append(this->WallIndicators);
 	}
-	if (ignoreHeightIndicators) {
-		ignoredActors.Add(this->mTopIndicator);
-		ignoredActors.Add(this->mBottomIndicator);
+	if (bIgnoreHeightIndicators) {
+		IgnoredActors.Add(this->TopIndicator);
+		IgnoredActors.Add(this->BottomIndicator);
 	}
 
-	APlayerCameraManager* cameraManager = ((AFGPlayerController*)GetInstigatorCharacter()->GetController())->PlayerCameraManager;
+	APlayerCameraManager* CameraManager = static_cast<AFGPlayerController*>(GetInstigatorCharacter()->GetController())->PlayerCameraManager;
 
-	FVector cameraLocation = cameraManager->GetCameraLocation();
-	FVector cameraDirection = cameraManager->GetActorForwardVector();
+	const FVector CameraLocation = CameraManager->GetCameraLocation();
+	const FVector CameraDirection = CameraManager->GetActorForwardVector();
 
-	FVector lineTraceEnd = cameraLocation + cameraDirection * MaxRaycastDistance;
+	const FVector LineTraceEnd = CameraLocation + CameraDirection * MaxRaycastDistance;
 
-	FCollisionQueryParams params = FCollisionQueryParams::DefaultQueryParam;
-	params.AddIgnoredActors(ignoredActors);
-	params.AddIgnoredActors(otherIgnoredActors);
-	return GetWorld()->LineTraceSingleByChannel(out_hitResult, cameraLocation, lineTraceEnd, ECC_Visibility, params);
+	FCollisionQueryParams Params = FCollisionQueryParams::DefaultQueryParam;
+	Params.AddIgnoredActors(IgnoredActors);
+	Params.AddIgnoredActors(OtherIgnoredActors);
+	return GetWorld()->LineTraceSingleByChannel(OutHitResult, CameraLocation, LineTraceEnd, ECC_Visibility, Params);
 }
 
-void AAAEquipment::UpdateExtraActors() {
-	UFGOutlineComponent::Get(GetWorld())->ShowDismantlePendingMaterial(this->mExtraActors);
+void AAAEquipment::UpdateExtraActors() const
+{
+	UFGOutlineComponent::Get(GetWorld())->ShowDismantlePendingMaterial(this->ExtraActors);
 }
 
-void GetMiddleOfActors(TArray<AActor*>& actors, FVector& middle) {
-	if (actors.Num() == 0)
+void GetMiddleOfActors(TArray<AActor*>& Actors, FVector& Middle) {
+	if (Actors.Num() == 0)
 		return;
-	FVector min;
-	FVector max;
-	FVector tmp;
+	FVector Min;
+	FVector Tmp;
 
-	actors[0]->GetActorBounds(true, min, tmp);
-	max = min;
+	Actors[0]->GetActorBounds(true, Min, Tmp);
+	FVector Max = Min;
 
-	FVector actorCenter;
-	for (int i = 1; i < actors.Num(); i++) {
-		actors[i]->GetActorBounds(true, actorCenter, tmp);
-		min = min.ComponentMin(actorCenter);
-		max = max.ComponentMax(actorCenter);
+	FVector ActorCenter;
+	for (int i = 1; i < Actors.Num(); i++) {
+		Actors[i]->GetActorBounds(true, ActorCenter, Tmp);
+		Min = Min.ComponentMin(ActorCenter);
+		Max = Max.ComponentMax(ActorCenter);
 	}
 
-	middle = (min + max) / 2;
+	Middle = (Min + Max) / 2;
 }
 
-void GetMostCommonRotation(TArray<AActor*>& actors, FRotator& rotation) {
-	TMap<float, int> rotationCount;
-	for (int i = 0; i < actors.Num(); i++) {
-		float actorRotationMod = FGenericPlatformMath::Fmod(FGenericPlatformMath::Fmod(actors[i]->GetActorRotation().Yaw, 90) + 90, 90);
-		rotationCount.FindOrAdd(actorRotationMod)++;
-	}
+void GetMostCommonRotation(TArray<AActor*>& Actors, FRotator& Rotation) {
+	TMap<float, int> RotationCount;
+	for (int i = 0; i < Actors.Num(); i++)
+		RotationCount.FindOrAdd(FGenericPlatformMath::Fmod(FGenericPlatformMath::Fmod(Actors[i]->GetActorRotation().Yaw, 90) + 90, 90))++;
 
-	float bestRotation = 0;
-	int maxCount = 0;
-	for (auto& rotationCnt : rotationCount) {
-		if (rotationCnt.Value > maxCount) {
-			maxCount = rotationCnt.Value;
-			bestRotation = rotationCnt.Key;
+	float BestRotation = 0;
+	int MaxCount = 0;
+	for (auto& RotationCnt : RotationCount) {
+		if (RotationCnt.Value > MaxCount) {
+			MaxCount = RotationCnt.Value;
+			BestRotation = RotationCnt.Key;
 		}
 	}
-	rotation = FRotator(0, bestRotation, 0);
+	Rotation = FRotator(0, BestRotation, 0);
 }
 
-void AAAEquipment::RunAction(TSubclassOf<AAAAction> actionClass) {
-	if (this->mAreaCorners.Num() < 3 && this->mExtraActors.Num() == 0) {
+void AAAEquipment::RunAction(const TSubclassOf<AAAAction> ActionClass) {
+	if (this->AreaCorners.Num() < 3 && this->ExtraActors.Num() == 0) {
 		this->ShowMessageOk(WidgetTitle, AreaNotSetMessage);
 		return;
 	}
-	if (this->mCurrentAction) {
+	if (this->CurrentAction) {
 		this->ShowMessageOk(WidgetTitle, ConflictingActionRunningMessage);
 		return;
 	}
-	TArray<AActor*> actorsInArea;
-	this->GetAllActorsInArea(actorsInArea);
-	actorsInArea.Append(this->mExtraActors);
-	FVector middle;
-	GetMiddleOfActors(actorsInArea, middle);
-	FRotator rotation;
-	GetMostCommonRotation(actorsInArea, rotation);
+	TArray<AActor*> ActorsInArea;
+	this->GetAllActorsInArea(ActorsInArea);
+	ActorsInArea.Append(this->ExtraActors);
+	FVector Middle;
+	GetMiddleOfActors(ActorsInArea, Middle);
+	FRotator Rotation;
+	GetMostCommonRotation(ActorsInArea, Rotation);
 
-	this->mCurrentAction = GetWorld()->SpawnActor<AAAAction>(actionClass, middle, rotation);
-	this->mCurrentAction->SetAAEquipment(this);
-	this->mCurrentAction->SetActors(actorsInArea);
-	this->mCurrentAction->InternalRun();
+	this->CurrentAction = GetWorld()->SpawnActor<AAAAction>(ActionClass, Middle, Rotation);
+	this->CurrentAction->SetAAEquipment(this);
+	this->CurrentAction->SetActors(ActorsInArea);
+	this->CurrentAction->InternalRun();
 }
 
 void AAAEquipment::ActionDone() {
-	this->mCurrentAction->Destroy();
-	this->mCurrentAction = nullptr;
+	this->CurrentAction->Destroy();
+	this->CurrentAction = nullptr;
 }
 
-bool IsPointInPolgon(FVector2D point, TArray<FVector2D>& polygon) {
-	if (polygon.Num() < 2)
+bool IsPointInPolygon(const FVector2D Point, TArray<FVector2D>& Polygon) {
+	if (Polygon.Num() < 2)
 		return false;
-	FVector2D min, max;
-	min = max = polygon[0];
-	for (int i = 1; i < polygon.Num(); i++)
+	FVector2D Min = Polygon[0];
+	FVector2D Max = Min;
+	for (int i = 1; i < Polygon.Num(); i++)
 	{
-		min = FVector2D::Min(min, polygon[i]);
-		max = FVector2D::Max(max, polygon[i]);
+		Min = FVector2D::Min(Min, Polygon[i]);
+		Max = FVector2D::Max(Max, Polygon[i]);
 	}
 
-	if (point.X < min.X || point.X > max.X || point.Y < min.Y || point.Y > max.Y)
+	if (Point.X < Min.X || Point.X > Max.X || Point.Y < Min.Y || Point.Y > Max.Y)
 		return false;
 
-	bool inside = false;
-	for (int i = 0, j = polygon.Num() - 1; i < polygon.Num(); j = i++)
+	bool bInside = false;
+	for (int i = 0, j = Polygon.Num() - 1; i < Polygon.Num(); j = i++)
 	{
-		if ((polygon[i].Y > point.Y) != (polygon[j].Y > point.Y) &&
-			point.X < (polygon[j].X - polygon[i].X) * (point.Y - polygon[i].Y) / (polygon[j].Y - polygon[i].Y) + polygon[i].X)
+		if ((Polygon[i].Y > Point.Y) != (Polygon[j].Y > Point.Y) &&
+			Point.X < (Polygon[j].X - Polygon[i].X) * (Point.Y - Polygon[i].Y) / (Polygon[j].Y - Polygon[i].Y) + Polygon[i].X)
 		{
-			inside = !inside;
+			bInside = !bInside;
 		}
 	}
 
-	return inside;
+	return bInside;
 }
 
-bool IsActorInArea(AActor* actor, TArray<FVector2D>& corners, float minZ, float maxZ) {
-	return minZ <= actor->GetActorLocation().Z && actor->GetActorLocation().Z <= maxZ && IsPointInPolgon(FVector2D(actor->GetActorLocation().X, actor->GetActorLocation().Y), corners);
+bool IsActorInArea(AActor* Actor, TArray<FVector2D>& Corners, const float MinZ, const float MaxZ) {
+	return MinZ <= Actor->GetActorLocation().Z && Actor->GetActorLocation().Z <= MaxZ && IsPointInPolygon(FVector2D(Actor->GetActorLocation().X, Actor->GetActorLocation().Y), Corners);
 }
 
-void AAAEquipment::GetAllActorsInArea(TArray<AActor*>& out_actors) {
+void AAAEquipment::GetAllActorsInArea(TArray<AActor*>& OutActors) {
 	for (TActorIterator<AFGBuildable> ActorIt(GetWorld()); ActorIt; ++ActorIt) {
-		if (IsActorInArea(*ActorIt, this->mAreaCorners, this->mAreaMinZ, this->mAreaMaxZ)) {
-			out_actors.Add(*ActorIt);
+		if (IsActorInArea(*ActorIt, this->AreaCorners, this->AreaMinZ, this->AreaMaxZ)) {
+			OutActors.Add(*ActorIt);
 		}
 	}
 }
 
-AFGPlayerController* AAAEquipment::GetOwningController() {
-	return (AFGPlayerController*)this->GetInstigatorCharacter()->GetController();
+AFGPlayerController* AAAEquipment::GetOwningController() const
+{
+	return static_cast<AFGPlayerController*>(this->GetInstigatorCharacter()->GetController());
 }

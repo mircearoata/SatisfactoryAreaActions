@@ -8,27 +8,34 @@
 #include "FGInventoryLibrary.h"
 #include "SML/util/Logging.h"
 
-void AAAMassDismantle::DoDismantle() {
-	for (AActor* actor : this->mActors) {
-		TArray<FInventoryStack> buildingRefunds;
-		((AFGBuildable*)actor)->GetDismantleRefund_Implementation(buildingRefunds);
-		((AFGBuildable*)actor)->Dismantle_Implementation();
+void AAAMassDismantle::DoDismantle()
+{
+    for (AActor* Actor : this->Actors)
+    {
+        TArray<FInventoryStack> BuildingRefunds;
+        static_cast<AFGBuildable*>(Actor)->GetDismantleRefund_Implementation(BuildingRefunds);
+        static_cast<AFGBuildable*>(Actor)->Dismantle_Implementation();
 
-		this->mRefunds.Append(buildingRefunds);
-	}
-	UFGInventoryLibrary::ConsolidateInventoryItems(this->mRefunds);
+        this->Refunds.Append(BuildingRefunds);
+    }
+    UFGInventoryLibrary::ConsolidateInventoryItems(this->Refunds);
 }
 
-void AAAMassDismantle::GiveRefunds() {
-	AFGCrate* crate = GetWorld()->SpawnActor<AFGCrate>(CrateClass, this->mAAEquipment->GetInstigatorCharacter()->GetActorLocation() + this->mAAEquipment->GetInstigatorCharacter()->GetActorForwardVector() * CrateDistance, FRotator(0, this->mAAEquipment->GetInstigatorCharacter()->GetActorRotation().Yaw + 90, 0));
+void AAAMassDismantle::GiveRefunds()
+{
+    AFGCrate* Crate = GetWorld()->SpawnActor<AFGCrate>(
+        CrateClass,
+        this->AAEquipment->GetInstigatorCharacter()->GetActorLocation() + this->AAEquipment->GetInstigatorCharacter()->GetActorForwardVector() * CrateDistance,
+        FRotator(0, this->AAEquipment->GetInstigatorCharacter()->GetActorRotation().Yaw + 90, 0));
 
-	int crateInventorySlots = 0;
-	for (FInventoryStack& stack : this->mRefunds) {
-		int itemStackSize = UFGItemDescriptor::GetStackSize(stack.Item.ItemClass);
-		crateInventorySlots += stack.NumItems / itemStackSize + !!(stack.NumItems % itemStackSize);
-	}
-	crate->GetInventory()->Resize(crateInventorySlots);
-	crate->GetInventory()->AddStacks(this->mRefunds);
-	this->mAAEquipment->ClearSelection();
-	this->Done();
+    int CrateInventorySlots = 0;
+    for (FInventoryStack& Stack : this->Refunds)
+    {
+        const int ItemStackSize = UFGItemDescriptor::GetStackSize(Stack.Item.ItemClass);
+        CrateInventorySlots += Stack.NumItems / ItemStackSize + !!(Stack.NumItems % ItemStackSize);
+    }
+    Crate->GetInventory()->Resize(CrateInventorySlots);
+    Crate->GetInventory()->AddStacks(this->Refunds);
+    this->AAEquipment->ClearSelection();
+    this->Done();
 }

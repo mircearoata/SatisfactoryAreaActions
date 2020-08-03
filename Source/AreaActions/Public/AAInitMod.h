@@ -22,13 +22,12 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void InitSubsystemManager();
 
-	FORCEINLINE AAASubsystemManager* GetSubsystemManager() { return mSubsystemManager; }
+	FORCEINLINE AAASubsystemManager* GetSubsystemManager() const { return SubsystemManager; }
 
 private:
 	UPROPERTY()
-	AAASubsystemManager* mSubsystemManager;
+	AAASubsystemManager* SubsystemManager;
 
-private:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AAASubsystemManager> SubsystemManagerClass;
 };

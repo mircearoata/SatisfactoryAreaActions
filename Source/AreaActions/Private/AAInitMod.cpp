@@ -3,18 +3,18 @@
 #include "AAInitMod.h"
 
 AAAInitMod* AAAInitMod::Get(UObject* WorldContextObject) {
-	TArray<AActor*> actors;
-	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, AAAInitMod::StaticClass(), actors);
-	return (AAAInitMod*)actors[0];
+	TArray<AActor*> Actors;
+	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, AAAInitMod::StaticClass(), Actors);
+	return static_cast<AAAInitMod*>(Actors[0]);
 }
 
 void AAAInitMod::InitSubsystemManager() {
-	TArray<AActor*> actors;
-	UGameplayStatics::GetAllActorsOfClass(this, AAASubsystemManager::StaticClass(), actors);
-	if (actors.Num() == 0) {
-		this->mSubsystemManager = GetWorld()->SpawnActor<AAASubsystemManager>(SubsystemManagerClass, FVector::ZeroVector, FRotator::ZeroRotator);
+	TArray<AActor*> Actors;
+	UGameplayStatics::GetAllActorsOfClass(this, AAASubsystemManager::StaticClass(), Actors);
+	if (Actors.Num() == 0) {
+		this->SubsystemManager = GetWorld()->SpawnActor<AAASubsystemManager>(SubsystemManagerClass, FVector::ZeroVector, FRotator::ZeroRotator);
 	}
 	else {
-		this->mSubsystemManager = (AAASubsystemManager*)actors[0];
+		this->SubsystemManager = static_cast<AAASubsystemManager*>(Actors[0]);
 	}
 }

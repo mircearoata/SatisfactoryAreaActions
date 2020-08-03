@@ -4,39 +4,52 @@
 #include "AAEquipment.h"
 #include "FGBuildableManufacturer.h"
 
-void AAASetRecipe::SetRecipe(TSubclassOf<UFGRecipe> selectedRecipe) {
-	if (!selectedRecipe) {
-		this->Done();
-		return;
-	}
-	TMap<TSubclassOf<AFGBuildableManufacturer>, int> statistics;
-	for (AActor* actor : this->mActors) {
-		if (actor->IsA<AFGBuildableManufacturer>()) {
-			if (UFGRecipe::GetProducedIn(selectedRecipe).Contains(actor->GetClass())) {
-				((AFGBuildableManufacturer*)actor)->GetInputInventory()->Empty();
-				((AFGBuildableManufacturer*)actor)->GetOutputInventory()->Empty();
-				((AFGBuildableManufacturer*)actor)->SetRecipe(selectedRecipe);
+void AAASetRecipe::SetRecipe(const TSubclassOf<UFGRecipe> SelectedRecipe)
+{
+    if (!SelectedRecipe)
+    {
+        this->Done();
+        return;
+    }
+    TMap<TSubclassOf<AFGBuildableManufacturer>, int> Statistics;
+    for (AActor* Actor : this->Actors)
+    {
+        if (Actor->IsA<AFGBuildableManufacturer>())
+        {
+            if (UFGRecipe::GetProducedIn(SelectedRecipe).Contains(Actor->GetClass()))
+            {
+                static_cast<AFGBuildableManufacturer*>(Actor)->GetInputInventory()->Empty();
+                static_cast<AFGBuildableManufacturer*>(Actor)->GetOutputInventory()->Empty();
+                static_cast<AFGBuildableManufacturer*>(Actor)->SetRecipe(SelectedRecipe);
 
-				statistics.FindOrAdd(actor->GetClass())++;
-			}
-		}
-	}
-	if (statistics.Num() == 0) {
-		FOnMessageOk messageOk;
-		messageOk.BindDynamic(this, &AAASetRecipe::Done);
-		FText message = FText::FromString(TEXT("No machines in the area accept this recipe."));
-		this->mAAEquipment->ShowMessageOkDelegate(ActionName, message, messageOk);
-	}
-	else {
-		FString machinesCountString;
-		for (auto& statisticsEntry : statistics) {
-			machinesCountString += FString::Printf(TEXT("%d %s%s,"), statisticsEntry.Value, *((AFGBuildable*)statisticsEntry.Key->GetDefaultObject())->mDisplayName.ToString(), statisticsEntry.Value > 1 ? TEXT("s") : TEXT(""));
-		}
-		machinesCountString = machinesCountString.LeftChop(1);
-		
-		FOnMessageOk messageOk;
-		messageOk.BindDynamic(this, &AAASetRecipe::Done);
-		FText message = FText::FromString(FString::Printf(TEXT("Set recipe to %s for %s"), *UFGRecipe::GetRecipeName(selectedRecipe).ToString(), *machinesCountString));
-		this->mAAEquipment->ShowMessageOkDelegate(ActionName, message, messageOk);
-	}
+                Statistics.FindOrAdd(Actor->GetClass())++;
+            }
+        }
+    }
+    if (Statistics.Num() == 0)
+    {
+        FOnMessageOk MessageOk;
+        MessageOk.BindDynamic(this, &AAASetRecipe::Done);
+        const FText Message = FText::FromString(TEXT("No machines in the area accept this recipe."));
+        this->AAEquipment->ShowMessageOkDelegate(ActionName, Message, MessageOk);
+    }
+    else
+    {
+        FString MachinesCountString;
+        for (auto& StatisticsEntry : Statistics)
+        {
+            MachinesCountString += FString::Printf(TEXT("%d %s%s,"), StatisticsEntry.Value,
+                                                   *static_cast<AFGBuildable*>(StatisticsEntry.Key->GetDefaultObject())->
+                                                    mDisplayName.ToString(),
+                                                   StatisticsEntry.Value > 1 ? TEXT("s") : TEXT(""));
+        }
+        MachinesCountString = MachinesCountString.LeftChop(1);
+
+        FOnMessageOk MessageOk;
+        MessageOk.BindDynamic(this, &AAASetRecipe::Done);
+        const FText Message = FText::FromString(FString::Printf(
+            TEXT("Set recipe to %s for %s"), *UFGRecipe::GetRecipeName(SelectedRecipe).ToString(),
+            *MachinesCountString));
+        this->AAEquipment->ShowMessageOkDelegate(ActionName, Message, MessageOk);
+    }
 }

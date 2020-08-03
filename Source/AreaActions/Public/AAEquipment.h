@@ -17,10 +17,10 @@ DECLARE_DYNAMIC_DELEGATE(FOnMessageNo);
 
 UENUM()
 enum EAASelectionMode {
-	SM_CORNER,
-	SM_BOTTOM,
-	SM_TOP,
-	SM_BUILDING
+	SM_Corner,
+	SM_Bottom,
+	SM_Top,
+	SM_Building
 };
 
 /**
@@ -34,10 +34,10 @@ class AREAACTIONS_API AAAEquipment : public AFGEquipment
 public:
 	AAAEquipment();
 
-	void BeginPlay() override;
+	virtual void BeginPlay() override;
 
-	void Equip(class AFGCharacterPlayer* character) override;
-	void UnEquip() override;
+	virtual void Equip(class AFGCharacterPlayer* Character) override;
+	virtual void UnEquip() override;
 
 	UFUNCTION(BlueprintCallable)
 	void PrimaryFire();
@@ -46,7 +46,7 @@ public:
 	void SecondaryFire();
 
 	UFUNCTION(BlueprintCallable)
-	void SetSelectionMode(EAASelectionMode mode) { this->mSelectionMode = mode; }
+	void SetSelectionMode(const EAASelectionMode Mode) { this->SelectionMode = Mode; }
 
 	UFUNCTION(BlueprintCallable)
 	void SelectMap();
@@ -55,71 +55,67 @@ public:
 	void ClearSelection();
 
 	UFUNCTION(BlueprintCallable)
-	void RunAction(TSubclassOf<AAAAction> actionClass);
+	void RunAction(TSubclassOf<AAAAction> ActionClass);
 	
 	UFUNCTION(BlueprintPure)
-	class AFGPlayerController* GetOwningController();
+	class AFGPlayerController* GetOwningController() const;
 	
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
-	void AddWidget(UFGInteractWidget* widget);
+	void AddWidget(UFGInteractWidget* Widget);
 	
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, meta = (AutoCreateRefTerm = "title,message"))
-	void ShowMessageOk(const FText& title, const FText& message);
+	void ShowMessageOk(const FText& Title, const FText& Message);
 	
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, meta = (AutoCreateRefTerm = "title,message"))
-	void ShowMessageOkDelegate(const FText& title, const FText& message, const FOnMessageOk& onOkClicked);
+	void ShowMessageOkDelegate(const FText& Title, const FText& Message, const FOnMessageOk& OnOkClicked);
 
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, meta = (AutoCreateRefTerm = "title,message"))
-	void ShowMessageYesNoDelegate(const FText& title, const FText& message, const FOnMessageYes& onYesClicked, const FOnMessageNo& onNoClicked);
+	void ShowMessageYesNoDelegate(const FText& Title, const FText& Message, const FOnMessageYes& OnYesClicked, const FOnMessageNo& OnNoClicked);
 
 	UFUNCTION(BlueprintCallable)
-	void UpdateExtraActors();
+	void UpdateExtraActors() const;
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void DelayedUpdateExtraActors();
 
-public:
 	void ActionDone();
 
 private:
+	bool RaycastMouseWithRange(FHitResult & OutHitResult, bool bIgnoreCornerIndicators = false, bool bIgnoreWallIndicators = false, bool bIgnoreHeightIndicators = false, TArray<AActor*> OtherIgnoredActors = TArray<AActor*>()) const;
 
-
-private:
-	bool RaycastMouseWithRange(FHitResult & out_hitResult, bool ignoreCornerIndicators = false, bool ignoreWallIndicators = false, bool ignoreHeightIndicators = false, TArray<AActor*> otherIgnoredActors = TArray<AActor*>());
-
-	void AddCorner(FVector2D location);
-	void RemoveCorner(int cornerIdx);
+	void AddCorner(FVector2D Location);
+	void RemoveCorner(int CornerIdx);
 	void UpdateHeight();
 
-	AAACornerIndicator* CreateCornerIndicator(FVector2D location);
-	AAAWallIndicator* CreateWallIndicator(FVector2D from, FVector2D to);
+	AAACornerIndicator* CreateCornerIndicator(FVector2D Location) const;
+	AAAWallIndicator* CreateWallIndicator(FVector2D From, FVector2D To) const;
 
-	void GetAllActorsInArea(TArray<AActor*>& out_actors);
+	void GetAllActorsInArea(TArray<AActor*>& OutActors);
 
 protected:
 	UPROPERTY(BlueprintReadOnly)
-	AAAAction* mCurrentAction;
+	AAAAction* CurrentAction;
 
 private:
 	UPROPERTY()
-	TArray<AActor*> mExtraActors;
+	TArray<AActor*> ExtraActors;
 
-	TArray<FVector2D> mAreaCorners;
-	float mAreaMinZ;
-	float mAreaMaxZ;
-	EAASelectionMode mSelectionMode;
+	TArray<FVector2D> AreaCorners;
+	float AreaMinZ;
+	float AreaMaxZ;
+	EAASelectionMode SelectionMode;
 	
 	UPROPERTY()
-	TArray<AAACornerIndicator*> mCornerIndicators;
+	TArray<AAACornerIndicator*> CornerIndicators;
 	
 	UPROPERTY()
-	TArray<AAAWallIndicator*> mWallIndicators;
+	TArray<AAAWallIndicator*> WallIndicators;
 	
 	UPROPERTY()
-	AAAHeightIndicator* mTopIndicator;
+	AAAHeightIndicator* TopIndicator;
 
 	UPROPERTY()
-	AAAHeightIndicator* mBottomIndicator;
+	AAAHeightIndicator* BottomIndicator;
 
 public:
 	UPROPERTY(EditDefaultsOnly)

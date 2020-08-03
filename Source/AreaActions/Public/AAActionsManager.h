@@ -20,5 +20,5 @@ public:
 
 public:
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, SaveGame)
-	TArray<TSubclassOf<AAAAction>> mAvailableActions;
+	TArray<TSubclassOf<AAAAction>> AvailableActions;
 };
