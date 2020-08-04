@@ -18,10 +18,12 @@ class AREAACTIONS_API AAAMassDismantle : public AAAAction
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintCallable)
-	void DoDismantle();
+	virtual void Run_Implementation() override;
+	
+	UFUNCTION()
+	void Dismantle();
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION()
 	void GiveRefunds();
 
 protected:

@@ -8,7 +8,17 @@
 #include "FGInventoryLibrary.h"
 #include "SML/util/Logging.h"
 
-void AAAMassDismantle::DoDismantle()
+void AAAMassDismantle::Run_Implementation()
+{
+    FOnMessageYes MessageYes;
+    MessageYes.BindDynamic(this, &AAAMassDismantle::Dismantle);
+    FOnMessageNo MessageNo;
+    MessageNo.BindDynamic(this, &AAAMassDismantle::Done);
+    const FText Message = FText::FromString(FString::Printf(TEXT("Are you sure you want to dismantle %d buildings?\nThe game will freeze for a while."), Actors.Num()));
+    this->AAEquipment->ShowMessageYesNoDelegate(ActionName, Message, MessageYes, MessageNo);
+}
+
+void AAAMassDismantle::Dismantle()
 {
     for (AActor* Actor : this->Actors)
     {
@@ -19,6 +29,17 @@ void AAAMassDismantle::DoDismantle()
         this->Refunds.Append(BuildingRefunds);
     }
     UFGInventoryLibrary::ConsolidateInventoryItems(this->Refunds);
+
+    int32 ItemCount = 0;
+    for(const FInventoryStack Stack : this->Refunds)
+        ItemCount += Stack.NumItems;
+    
+    FOnMessageYes MessageYes;
+    MessageYes.BindDynamic(this, &AAAMassDismantle::GiveRefunds);
+    FOnMessageNo MessageNo;
+    MessageNo.BindDynamic(this, &AAAMassDismantle::Done);
+    const FText Message = FText::FromString(FString::Printf(TEXT("Do you want to receive the refunds (%d items) in a crate near you?"), ItemCount));
+    this->AAEquipment->ShowMessageYesNoDelegate(ActionName, Message, MessageYes, MessageNo);
 }
 
 void AAAMassDismantle::GiveRefunds()

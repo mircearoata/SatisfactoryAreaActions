@@ -14,11 +14,6 @@ public:
 	UFUNCTION(BlueprintNativeEvent)
 	void Run();
 
-	void InternalRun();
-	
-	UFUNCTION(BlueprintNativeEvent)
-	void PostRun();
-
 	UFUNCTION(BlueprintCallable)
 	void Done();
 	
@@ -44,7 +39,4 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Action", meta = (multiline = true))
 	FText ActionDescription;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Action")
-	bool CloseAfterRun;
 };

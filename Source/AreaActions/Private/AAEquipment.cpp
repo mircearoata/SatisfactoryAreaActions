@@ -2,7 +2,6 @@
 
 #include "AAEquipment.h"
 #include "SML/util/Logging.h"
-#include "FGHUD.h"
 #include "FGBuildable.h"
 #include "UI/FGGameUI.h"
 #include "GenericPlatform/GenericPlatformMath.h"
@@ -284,7 +283,7 @@ void AAAEquipment::RunAction(const TSubclassOf<AAAAction> ActionClass) {
 	this->CurrentAction = GetWorld()->SpawnActor<AAAAction>(ActionClass, Middle, Rotation);
 	this->CurrentAction->SetAAEquipment(this);
 	this->CurrentAction->SetActors(ActorsInArea);
-	this->CurrentAction->InternalRun();
+	this->CurrentAction->Run();
 }
 
 void AAAEquipment::ActionDone() {

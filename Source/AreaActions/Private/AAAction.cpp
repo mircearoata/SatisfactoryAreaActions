@@ -7,20 +7,9 @@
 void AAAAction::Run_Implementation() {
 }
 
-void AAAAction::InternalRun() {
-	this->Run();
-	this->PostRun();
-}
-
 void AAAAction::Done()
 {
 	this->AAEquipment->ActionDone();
-}
-
-void AAAAction::PostRun_Implementation() {
-	if (CloseAfterRun) {
-		this->Done();
-	}
 }
 
 void AAAAction::PrimaryFire_Implementation() {
