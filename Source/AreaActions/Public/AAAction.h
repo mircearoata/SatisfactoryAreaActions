@@ -23,8 +23,8 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void SecondaryFire();
 
-	FORCEINLINE void SetActors(const TArray<AActor*> Actors) { this->Actors = Actors; }
-	FORCEINLINE void SetAAEquipment(class AAAEquipment* Equipment) { this->AAEquipment = Equipment; }
+	FORCEINLINE void SetActors(const TArray<AActor*> InActors) { this->Actors = InActors; }
+	FORCEINLINE void SetAAEquipment(class AAAEquipment* InEquipment) { this->AAEquipment = InEquipment; }
 public:
 	UPROPERTY(BlueprintReadOnly)
 	class AAAEquipment* AAEquipment;
