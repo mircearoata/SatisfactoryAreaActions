@@ -18,7 +18,8 @@ void AAAFill::Run_Implementation() {
         FOnMessageOk MessageOk;
         MessageOk.BindDynamic(this, &AAAFill::Done);
         const FText Message = FText::FromString(TEXT("Some buildings cannot be copied because they have connections to buildings outside the selected area. Remove the connections temporary, or include the connected buildings in the area. The buildings are highlighted."));
-        this->AAEquipment->ShowMessageOkDelegate(ActionName, Message, MessageOk);
+        UWidget* MessageOkWidget = this->AAEquipment->CreateActionMessageOk(Message, MessageOk);
+        this->AAEquipment->AddActionWidget(MessageOkWidget);
     }
     else {
         this->AreaSize = this->CopyBuildingsComponent->GetBounds().Extents * 2;

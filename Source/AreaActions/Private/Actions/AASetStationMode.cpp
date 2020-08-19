@@ -26,7 +26,8 @@ void AAASetStationMode::SetStationMode(const bool IsLoadMode)
         FOnMessageOk MessageOk;
         MessageOk.BindDynamic(this, &AAASetStationMode::Done);
         const FText Message = FText::FromString(TEXT("No stations in the area."));
-        this->AAEquipment->ShowMessageOkDelegate(ActionName, Message, MessageOk);
+        UWidget* MessageOkWidget = this->AAEquipment->CreateActionMessageOk(Message, MessageOk);
+        this->AAEquipment->AddActionWidget(MessageOkWidget);
     }
     else
     {
@@ -45,6 +46,7 @@ void AAASetStationMode::SetStationMode(const bool IsLoadMode)
         const FText Message = FText::FromString(FString::Printf(TEXT("Set stations to %s for %s"),
             IsLoadMode ? TEXT("load") : TEXT("unload"),
             *MachinesCountString));
-        this->AAEquipment->ShowMessageOkDelegate(ActionName, Message, MessageOk);
+        UWidget* MessageOkWidget = this->AAEquipment->CreateActionMessageOk(Message, MessageOk);
+        this->AAEquipment->AddActionWidget(MessageOkWidget);
     }
 }

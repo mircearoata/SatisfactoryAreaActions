@@ -14,13 +14,15 @@
 DECLARE_DYNAMIC_DELEGATE(FOnMessageOk);
 DECLARE_DYNAMIC_DELEGATE(FOnMessageYes);
 DECLARE_DYNAMIC_DELEGATE(FOnMessageNo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnActionDone);
 
-UENUM()
+UENUM(BlueprintType)
 enum EAASelectionMode {
-	SM_Corner,
-	SM_Bottom,
-	SM_Top,
-	SM_Building
+	SM_Corner UMETA(DisplayName="Corner"),
+	SM_Bottom UMETA(DisplayName="Bottom"),
+	SM_Top UMETA(DisplayName="Top"),
+	SM_Building UMETA(DisplayName="Building"),
+	SM_MAX UMETA(Hidden)
 };
 
 /**
@@ -47,6 +49,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetSelectionMode(const EAASelectionMode Mode) { this->SelectionMode = Mode; }
+	
+	UFUNCTION(BlueprintCallable)
+    EAASelectionMode GetSelectionMode() const { return this->SelectionMode; }
 
 	UFUNCTION(BlueprintCallable)
 	void SelectMap();
@@ -60,6 +65,21 @@ public:
 	UFUNCTION(BlueprintPure)
 	class AFGPlayerController* GetOwningController() const;
 	
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
+	void AddActionWidget(UWidget* Widget);
+	
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
+    void RemoveActionWidget(UWidget* Widget);
+
+	void ActionDone();
+	
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, meta = (AutoCreateRefTerm = "message"))
+    UWidget* CreateActionMessageOk(const FText& Message, const FOnMessageOk& OnOkClicked);
+
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, meta = (AutoCreateRefTerm = "message"))
+    UWidget* CreateActionMessageYesNo(const FText& Message, const FOnMessageYes& OnYesClicked, const FOnMessageNo& OnNoClicked);
+	
+protected:
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
 	void AddWidget(UFGInteractWidget* Widget);
 	
@@ -78,7 +98,9 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 	void DelayedUpdateExtraActors();
 
-	void ActionDone();
+public:
+	UPROPERTY(BlueprintAssignable)
+	FOnActionDone OnActionDone;
 
 private:
 	bool RaycastMouseWithRange(FHitResult & OutHitResult, bool bIgnoreCornerIndicators = false, bool bIgnoreWallIndicators = false, bool bIgnoreHeightIndicators = false, TArray<AActor*> OtherIgnoredActors = TArray<AActor*>()) const;

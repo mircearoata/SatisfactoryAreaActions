@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "AAActionCategory.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "AAAction.generated.h"
@@ -16,27 +17,48 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void Done();
+
+	UFUNCTION(BlueprintNativeEvent)
+    void OnCancel();
+    
+	UFUNCTION(BlueprintCallable)
+    void Cancel();
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void PrimaryFire();
-	
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void SecondaryFire();
 
 	FORCEINLINE void SetActors(const TArray<AActor*> InActors) { this->Actors = InActors; }
 	FORCEINLINE void SetAAEquipment(class AAAEquipment* InEquipment) { this->AAEquipment = InEquipment; }
-public:
+
+	UFUNCTION(BlueprintPure, Category = "Action")
+	static FText GetActionName(TSubclassOf<AAAAction> InClass);
+
+	UFUNCTION(BlueprintPure, Category = "Action")
+	static FText GetActionDescription(TSubclassOf<AAAAction> InClass);
+
+	UFUNCTION(BlueprintPure, Category = "Action")
+	static TSubclassOf<UAAActionCategory> GetActionCategory(TSubclassOf<AAAAction> InClass);
+
+	UFUNCTION(BlueprintPure, Category = "Action")
+    static FSlateBrush GetActionIcon(TSubclassOf<AAAAction> InClass);
+	
+protected:
 	UPROPERTY(BlueprintReadOnly)
 	class AAAEquipment* AAEquipment;
 
-protected:
 	UPROPERTY(BlueprintReadOnly)
 	TArray<AActor*> Actors;
 
-public:
+protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Action")
-	FText ActionName;
+	FText Name;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Action", meta = (multiline = true))
-	FText ActionDescription;
+	FText Description;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Action")
+	FSlateBrush Icon;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Action")
+	TSubclassOf<UAAActionCategory> Category;
 };

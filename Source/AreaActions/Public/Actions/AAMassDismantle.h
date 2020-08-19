@@ -6,6 +6,7 @@
 #include "AAAction.h"
 #include "FGCrate.h"
 #include "FGInventoryComponent.h"
+#include "Widget.h"
 
 #include "AAMassDismantle.generated.h"
 
@@ -29,6 +30,12 @@ public:
 protected:
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FInventoryStack> Refunds;
+
+	UPROPERTY()
+	UWidget* RefundsWidget; 
+
+	UPROPERTY()
+	UWidget* ConfirmWidget; 
 
 private:
 	UPROPERTY(EditDefaultsOnly)

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "AAAction.h"
+#include "Widget.h"
 
 #include "AAClearInventories.generated.h"
 
@@ -20,4 +21,8 @@ public:
 	
 	UFUNCTION()
 	void ClearInventories();
+	
+protected:
+	UPROPERTY()
+	UWidget* ConfirmWidget;
 };

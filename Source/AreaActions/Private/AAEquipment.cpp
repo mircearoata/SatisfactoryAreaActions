@@ -7,12 +7,13 @@
 #include "GenericPlatform/GenericPlatformMath.h"
 
 AAAEquipment::AAAEquipment() : Super() {
-	this->SelectionMode = SM_Corner;
+	this->SelectionMode = EAASelectionMode::SM_Corner;
 	this->AreaMinZ = MinZ;
 	this->AreaMaxZ = MaxZ;
 }
 
 void AAAEquipment::BeginPlay() {
+    Super::BeginPlay();
 	this->BottomIndicator = GetWorld()->SpawnActor<AAAHeightIndicator>(HeightIndicatorClass, FVector(0, 0, this->AreaMinZ), FRotator::ZeroRotator);
 	this->BottomIndicator->SetIndicatorType(Bottom);
 	this->TopIndicator = GetWorld()->SpawnActor<AAAHeightIndicator>(HeightIndicatorClass, FVector(0, 0, this->AreaMaxZ), FRotator::ZeroRotator);
@@ -35,7 +36,7 @@ void AAAEquipment::UnEquip() {
 void AAAEquipment::PrimaryFire() {
 	FHitResult HitResult;
 	switch (this->SelectionMode) {
-	case SM_Corner:
+	case EAASelectionMode::SM_Corner:
 		if (RaycastMouseWithRange(HitResult, false, true, true)) {
 			if (HitResult.Actor->IsA<AAACornerIndicator>()) {
 				AAACornerIndicator* HitCorner = static_cast<AAACornerIndicator*>(HitResult.Actor.Get());
@@ -47,7 +48,7 @@ void AAAEquipment::PrimaryFire() {
 			}
 		}
 		break;
-	case SM_Bottom:
+	case EAASelectionMode::SM_Bottom:
 		if (RaycastMouseWithRange(HitResult, false, true, false)) {
 			if (HitResult.Actor == this->BottomIndicator) {
 				this->AreaMinZ = MinZ;
@@ -63,7 +64,7 @@ void AAAEquipment::PrimaryFire() {
 			this->UpdateHeight();
 		}
 		break;
-	case SM_Top:
+	case EAASelectionMode::SM_Top:
 		if (RaycastMouseWithRange(HitResult, false, true, false)) {
 			if (HitResult.Actor == this->TopIndicator) {
 				this->AreaMaxZ = MaxZ;
@@ -79,7 +80,7 @@ void AAAEquipment::PrimaryFire() {
 			this->UpdateHeight();
 		}
 		break;
-	case SM_Building:
+	case EAASelectionMode::SM_Building:
 		if (RaycastMouseWithRange(HitResult, true, true, true)) {
 			if (HitResult.Actor->IsA<AFGBuildable>()) {
 				if (this->ExtraActors.Contains(HitResult.Actor.Get())) {
@@ -289,6 +290,7 @@ void AAAEquipment::RunAction(const TSubclassOf<AAAAction> ActionClass) {
 void AAAEquipment::ActionDone() {
 	this->CurrentAction->Destroy();
 	this->CurrentAction = nullptr;
+	this->OnActionDone.Broadcast();
 }
 
 bool IsPointInPolygon(const FVector2D Point, TArray<FVector2D>& Polygon) {

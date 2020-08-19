@@ -15,11 +15,13 @@ void AAAMassDismantle::Run_Implementation()
     FOnMessageNo MessageNo;
     MessageNo.BindDynamic(this, &AAAMassDismantle::Done);
     const FText Message = FText::FromString(FString::Printf(TEXT("Are you sure you want to dismantle %d buildings?\nThe game will freeze for a while."), Actors.Num()));
-    this->AAEquipment->ShowMessageYesNoDelegate(ActionName, Message, MessageYes, MessageNo);
+    ConfirmWidget = this->AAEquipment->CreateActionMessageYesNo(Message, MessageYes, MessageNo);
+    this->AAEquipment->AddActionWidget(ConfirmWidget);
 }
 
 void AAAMassDismantle::Dismantle()
 {
+    this->AAEquipment->RemoveActionWidget(ConfirmWidget);
     for (AActor* Actor : this->Actors)
     {
         TArray<FInventoryStack> BuildingRefunds;
@@ -39,11 +41,13 @@ void AAAMassDismantle::Dismantle()
     FOnMessageNo MessageNo;
     MessageNo.BindDynamic(this, &AAAMassDismantle::Done);
     const FText Message = FText::FromString(FString::Printf(TEXT("Do you want to receive the refunds (%d items) in a crate near you?"), ItemCount));
-    this->AAEquipment->ShowMessageYesNoDelegate(ActionName, Message, MessageYes, MessageNo);
+    RefundsWidget = this->AAEquipment->CreateActionMessageYesNo(Message, MessageYes, MessageNo);
+    this->AAEquipment->AddActionWidget(RefundsWidget);
 }
 
 void AAAMassDismantle::GiveRefunds()
 {
+    this->AAEquipment->RemoveActionWidget(RefundsWidget);
     AFGCrate* Crate = GetWorld()->SpawnActor<AFGCrate>(
         CrateClass,
         this->AAEquipment->GetInstigatorCharacter()->GetActorLocation() + this->AAEquipment->GetInstigatorCharacter()->GetActorForwardVector() * CrateDistance,

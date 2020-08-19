@@ -17,8 +17,13 @@ class AREAACTIONS_API AAAActionsManager : public AAASubsystem
 public:
 	UFUNCTION(BlueprintPure, DisplayName = "GetAAActionsManager", Meta = (DefaultToSelf = "WorldContextObject"))
 	static AAAActionsManager* Get(UObject* WorldContextObject);
-
-public:
+	
+	UFUNCTION(BlueprintPure)
+	void GetAvailableActions(TArray<TSubclassOf<AAAAction>>& OutAvailableActions) const;
+	
+	UFUNCTION(BlueprintPure)
+    void GetAvailableActionsInCategory(TSubclassOf<UAAActionCategory> ActionCategory, TArray<TSubclassOf<AAAAction>>& OutAvailableActions) const;
+protected:
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, SaveGame)
 	TArray<TSubclassOf<AAAAction>> AvailableActions;
 };

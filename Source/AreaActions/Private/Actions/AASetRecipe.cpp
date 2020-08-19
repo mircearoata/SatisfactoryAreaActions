@@ -31,7 +31,8 @@ void AAASetRecipe::SetRecipe(const TSubclassOf<UFGRecipe> SelectedRecipe)
         FOnMessageOk MessageOk;
         MessageOk.BindDynamic(this, &AAASetRecipe::Done);
         const FText Message = FText::FromString(TEXT("No machines in the area accept this recipe."));
-        this->AAEquipment->ShowMessageOkDelegate(ActionName, Message, MessageOk);
+        UWidget* MessageOkWidget = this->AAEquipment->CreateActionMessageOk(Message, MessageOk);
+        this->AAEquipment->AddActionWidget(MessageOkWidget);
     }
     else
     {
@@ -50,6 +51,7 @@ void AAASetRecipe::SetRecipe(const TSubclassOf<UFGRecipe> SelectedRecipe)
         const FText Message = FText::FromString(FString::Printf(
             TEXT("Set recipe to %s for %s"), *UFGRecipe::GetRecipeName(SelectedRecipe).ToString(),
             *MachinesCountString));
-        this->AAEquipment->ShowMessageOkDelegate(ActionName, Message, MessageOk);
+        UWidget* MessageOkWidget = this->AAEquipment->CreateActionMessageOk(Message, MessageOk);
+        this->AAEquipment->AddActionWidget(MessageOkWidget);
     }
 }

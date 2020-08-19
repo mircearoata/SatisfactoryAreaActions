@@ -16,11 +16,13 @@ void AAAClearInventories::Run_Implementation()
     FOnMessageNo MessageNo;
     MessageNo.BindDynamic(this, &AAAClearInventories::Done);
     const FText Message = FText::FromString(FString::Printf(TEXT("Are you sure you want to clear the inventories of %d buildings?"), Actors.Num()));
-    this->AAEquipment->ShowMessageYesNoDelegate(ActionName, Message, MessageYes, MessageNo);
+    ConfirmWidget = this->AAEquipment->CreateActionMessageYesNo(Message, MessageYes, MessageNo);
+    this->AAEquipment->AddActionWidget(ConfirmWidget);
 }
 
 void AAAClearInventories::ClearInventories()
 {
+    this->AAEquipment->RemoveActionWidget(ConfirmWidget);
     int32 ItemCount = 0;
     for (AActor* Actor : this->Actors)
     {
@@ -55,5 +57,6 @@ void AAAClearInventories::ClearInventories()
     FOnMessageOk MessageOk;
     MessageOk.BindDynamic(this, &AAAClearInventories::Done);
     const FText Message = FText::FromString(FString::Printf(TEXT("Cleared %d items"), ItemCount));
-    this->AAEquipment->ShowMessageOkDelegate(ActionName, Message, MessageOk);
+    UWidget* MessageOkWidget = this->AAEquipment->CreateActionMessageOk(Message, MessageOk);
+    this->AAEquipment->AddActionWidget(MessageOkWidget);
 }
