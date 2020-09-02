@@ -30,7 +30,7 @@ struct FPreviewBuildings
 	GENERATED_BODY()
 
 	UPROPERTY()
-	TMap<int32, AFGBuildable*> Buildings;
+	TMap<AFGBuildable* , AFGBuildable*> Buildings;
 };
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -57,6 +57,7 @@ public:
 	void Finish();
 
 private:
+	void FixReferencesForCopy(int CopyId);
 	bool ValidateObject(UObject* Object);
 
 	void CalculateBounds();
@@ -69,7 +70,7 @@ private:
 	TArray<TPair<FVector, FRotator>> CopyLocations;
 
 	UPROPERTY()
-	TMap<AFGBuildable*, FPreviewBuildings> BuildingsPreview;
+	TMap<int32, FPreviewBuildings> BuildingsPreview;
 
 	TSet<UProperty*> ValidCheckSkipProperties;
 

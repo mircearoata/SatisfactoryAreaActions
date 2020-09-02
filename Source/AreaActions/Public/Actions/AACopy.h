@@ -18,6 +18,7 @@ class AREAACTIONS_API AAACopy : public AAAAction
 public:
 	AAACopy();
 	virtual void Run_Implementation() override;
+	virtual void OnCancel_Implementation() override;
 
 	UFUNCTION(BlueprintCallable)
 	void SetDelta(const FVector InDeltaPosition, const FRotator InDeltaRotation, const FVector InRotationCenter, const bool InIsRotationCenterSet)
@@ -27,6 +28,18 @@ public:
 		this->RotationCenter = InRotationCenter;
 		this->IsRotationCenterSet = InIsRotationCenterSet;
 	}
+	
+	UFUNCTION(BlueprintPure)
+	void GetDelta(FVector& OutDeltaPosition, FRotator& OutDeltaRotation, FVector& OutRotationCenter, bool& OutIsRotationCenterSet) const
+	{
+		OutDeltaPosition = this->DeltaPosition;
+		OutDeltaRotation = this->DeltaRotation;
+		OutRotationCenter = this->RotationCenter;
+		OutIsRotationCenterSet = this->IsRotationCenterSet;
+	}
+	
+	UFUNCTION(BlueprintImplementableEvent)
+    void ShowCopyWidget();
 	
 	UFUNCTION(BlueprintCallable)
 	void Preview();

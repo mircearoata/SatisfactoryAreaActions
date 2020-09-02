@@ -27,19 +27,13 @@ void AAACopy::Run_Implementation() {
 		this->AAEquipment->AddActionWidget(MessageOkWidget);
 	}
 	else {
-		this->SetDelta(FVector(0, 0, 1000), FRotator::ZeroRotator, FVector::ZeroVector, false);
-		this->Preview();
-		FTimerDelegate TimerCallback;
-		TimerCallback.BindLambda([=]()
-        {
-			this->SetDelta(FVector(0, 1000, 1000), FRotator(0, 45, 0), FVector::ZeroVector, false);
-			this->Preview();
-			this->Finish();
-        });
-
-		FTimerHandle Handle;
-		GetWorld()->GetTimerManager().SetTimer(Handle, TimerCallback, 10.0f, false);
+		this->ShowCopyWidget();
 	}
+}
+
+void AAACopy::OnCancel_Implementation()
+{
+	this->CopyBuildingsComponent->RemoveCopy(0);
 }
 
 void AAACopy::Preview()

@@ -570,20 +570,12 @@ FTransform TransformAroundPoint(const FTransform Original, const FVector Offset,
     return FTransform(NewRotation, NewLocation, Original.GetScale3D());
 }
 
-int UAACopyBuildingsComponent::AddCopy(const FVector Offset, const FRotator Rotation, const FVector RotationCenter, const bool Relative)
+void UAACopyBuildingsComponent::FixReferencesForCopy(const int CopyId)
 {
-    for (AFGBuildable* Buildable : this->OriginalBuildings)
+    for (int i = 0; i < this->OriginalBuildings.Num(); i++)
     {
-        FTransform NewTransform = TransformAroundPoint(Buildable->GetActorTransform(), Relative ? BuildingsBounds.Rotation.RotateVector(Offset) : Offset, Rotation, RotationCenter);
-        FActorSpawnParameters Params;
-        Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-        Params.bDeferConstruction = true;
-        AFGBuildable* PreviewBuilding = this->GetWorld()->SpawnActor<AFGBuildable>(
-            Buildable->GetClass(), NewTransform, Params);
-        PreviewBuilding->bDeferBeginPlay = true;
-        PreviewBuilding->FinishSpawning(FTransform::Identity, true);
-        this->BuildingsPreview.FindOrAdd(Buildable).Buildings.Add(CurrentId, PreviewBuilding);
-
+        AFGBuildable* Buildable = this->OriginalBuildings[i];
+        AFGBuildable* PreviewBuilding = this->BuildingsPreview[CopyId].Buildings[Buildable];
         for (UActorComponent* NewComponent : PreviewBuilding->GetComponents())
             PreLoadGame(NewComponent);
         PreLoadGame(PreviewBuilding);
@@ -592,10 +584,11 @@ int UAACopyBuildingsComponent::AddCopy(const FVector Offset, const FRotator Rota
             PreSaveGame(Component);
         PreSaveGame(Buildable);
     }
+    
     for (int i = 0; i < this->OriginalBuildings.Num(); i++)
     {
         AFGBuildable* Buildable = this->OriginalBuildings[i];
-        AFGBuildable* PreviewBuilding = this->BuildingsPreview.Find(Buildable)->Buildings[CurrentId];
+        AFGBuildable* PreviewBuilding = this->BuildingsPreview[CopyId].Buildings[Buildable];
 
         CopyBySerialization(Buildable, PreviewBuilding);
 
@@ -630,11 +623,11 @@ int UAACopyBuildingsComponent::AddCopy(const FVector Offset, const FRotator Rota
     for (int i = 0; i < this->OriginalBuildings.Num(); i++)
     {
         AFGBuildable* Buildable = this->OriginalBuildings[i];
-        AFGBuildable* PreviewBuilding = this->BuildingsPreview.Find(Buildable)->Buildings[CurrentId];
+        AFGBuildable* PreviewBuilding = this->BuildingsPreview[CopyId].Buildings[Buildable];
         for (int j = 0; j < this->OriginalBuildings.Num(); j++)
         {
             AFGBuildable* OtherBuildable = this->OriginalBuildings[j];
-            AFGBuildable* OtherPreviewBuilding = this->BuildingsPreview.Find(OtherBuildable)->Buildings[CurrentId];
+            AFGBuildable* OtherPreviewBuilding = this->BuildingsPreview[CopyId].Buildings[OtherBuildable];
             FixReferencesToBuilding(OtherBuildable, OtherPreviewBuilding, Buildable, PreviewBuilding);
 
             for (UActorComponent* Component : OtherBuildable->GetComponents())
@@ -666,7 +659,7 @@ int UAACopyBuildingsComponent::AddCopy(const FVector Offset, const FRotator Rota
     for (int i = 0; i < this->OriginalBuildings.Num(); i++)
     {
         AFGBuildable* Buildable = this->OriginalBuildings[i];
-        AFGBuildable* PreviewBuilding = this->BuildingsPreview.Find(Buildable)->Buildings[CurrentId];
+        AFGBuildable* PreviewBuilding = this->BuildingsPreview[CopyId].Buildings[Buildable];
         for (UActorComponent* NewComponent : PreviewBuilding->GetComponents())
             PostLoadGame(NewComponent);
         PostLoadGame(PreviewBuilding);
@@ -675,11 +668,30 @@ int UAACopyBuildingsComponent::AddCopy(const FVector Offset, const FRotator Rota
             PostSaveGame(Component);
         PostSaveGame(Buildable);
     }
+}
 
+int UAACopyBuildingsComponent::AddCopy(const FVector Offset, const FRotator Rotation, const FVector RotationCenter, const bool Relative)
+{
+    this->BuildingsPreview.Add(CurrentId);
+    for (AFGBuildable* Buildable : this->OriginalBuildings)
+    {
+        FTransform NewTransform = TransformAroundPoint(Buildable->GetActorTransform(), Relative ? BuildingsBounds.Rotation.RotateVector(Offset) : Offset, Rotation, RotationCenter);
+        FActorSpawnParameters Params;
+        Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        Params.bDeferConstruction = true;
+        AFGBuildable* PreviewBuilding = this->GetWorld()->SpawnActor<AFGBuildable>(
+            Buildable->GetClass(), NewTransform, Params);
+        PreviewBuilding->bDeferBeginPlay = true;
+        PreviewBuilding->FinishSpawning(FTransform::Identity, true);
+        this->BuildingsPreview[CurrentId].Buildings.Add(Buildable, PreviewBuilding);
+    }
+    
+    this->FixReferencesForCopy(CurrentId);
+    
     for (int i = 0; i < this->OriginalBuildings.Num(); i++)
     {
         AFGBuildable* Buildable = this->OriginalBuildings[i];
-        AFGBuildable* PreviewBuilding = this->BuildingsPreview.Find(Buildable)->Buildings[CurrentId];
+        AFGBuildable* PreviewBuilding = this->BuildingsPreview[CurrentId].Buildings[Buildable];
         PreviewBuilding->DeferredBeginPlay();
         TArray<UFGColoredInstanceMeshProxy*> ColoredInstanceMeshProxies;
         PreviewBuilding->GetComponents<UFGColoredInstanceMeshProxy>(ColoredInstanceMeshProxies);
@@ -700,7 +712,7 @@ void UAACopyBuildingsComponent::MoveCopy(const int CopyId, const FVector Offset,
     for (AFGBuildable* Buildable : this->OriginalBuildings)
     {
         FTransform NewTransform = TransformAroundPoint(Buildable->GetActorTransform(), Relative ? BuildingsBounds.Rotation.RotateVector(Offset) : Offset, Rotation, RotationCenter);
-        AFGBuildable* PreviewBuilding = this->BuildingsPreview[Buildable].Buildings[CopyId];
+        AFGBuildable* PreviewBuilding = this->BuildingsPreview[CopyId].Buildings[Buildable];
         const EComponentMobility::Type CurrentMobility = PreviewBuilding->GetRootComponent()->Mobility;
         PreviewBuilding->GetRootComponent()->SetMobility(EComponentMobility::Movable);
         PreviewBuilding->SetActorTransform(NewTransform);
@@ -712,20 +724,22 @@ void UAACopyBuildingsComponent::RemoveCopy(const int CopyId)
 {
     for (AFGBuildable* Buildable : this->OriginalBuildings)
     {
-        AFGBuildable* PreviewBuilding = this->BuildingsPreview[Buildable].Buildings[CopyId];
-        this->BuildingsPreview[Buildable].Buildings.Remove(CopyId);
+        AFGBuildable* PreviewBuilding = this->BuildingsPreview[CopyId].Buildings[Buildable];
         PreviewBuilding->Destroy();
     }
+    this->BuildingsPreview.Remove(CopyId);
 }
 
 void UAACopyBuildingsComponent::Finish()
 {
-    TArray<AFGBuildable*> PreviewBuildingKeys;
-    this->BuildingsPreview.GetKeys(PreviewBuildingKeys);
-    for (AFGBuildable* Buildable : PreviewBuildingKeys)
+    TArray<int> CopyIds;
+    this->BuildingsPreview.GetKeys(CopyIds);
+    for (int32 CopyId : CopyIds)
     {
-        for (const auto Preview : this->BuildingsPreview[Buildable].Buildings)
+        this->FixReferencesForCopy(CopyId);
+        for (const auto Preview : this->BuildingsPreview[CopyId].Buildings)
         {
+            AFGBuildable* Buildable = Preview.Key;
             AFGBuildable* PreviewBuilding = Preview.Value;
             TArray<UFGColoredInstanceMeshProxy*> ColoredInstanceMeshProxies;
             PreviewBuilding->GetComponents<UFGColoredInstanceMeshProxy>(ColoredInstanceMeshProxies);

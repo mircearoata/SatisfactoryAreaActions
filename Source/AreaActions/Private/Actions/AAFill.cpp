@@ -23,19 +23,15 @@ void AAAFill::Run_Implementation() {
     }
     else {
         this->AreaSize = this->CopyBuildingsComponent->GetBounds().Extents * 2;
-        this->SetSettings(FFillCount(FFillAxis(10, true), FFillAxis(2, false), FFillAxis::None), FVector::ZeroVector, FVector::ZeroVector);
-        this->Preview();
-        FTimerDelegate TimerCallback;
-        TimerCallback.BindLambda([=]()
-        {
-            this->SetSettings(FFillCount(FFillAxis(2, false), FFillAxis(10, true), FFillAxis(3, false)), FVector::ZeroVector, FVector::ZeroVector);
-            this->Preview();
-            this->Finish();
-        });
-
-        FTimerHandle Handle;
-        GetWorld()->GetTimerManager().SetTimer(Handle, TimerCallback, 10.0f, false);
+        this->ShowFillWidget();
     }
+}
+
+void AAAFill::OnCancel_Implementation()
+{
+    for(const auto Copy : CopyId)
+        this->CopyBuildingsComponent->RemoveCopy(Copy.Value);
+    CopyId.Empty();
 }
 
 void AAAFill::Preview()
@@ -47,7 +43,7 @@ void AAAFill::Preview()
         if(x == 0 && y == 0 && z == 0)
             continue;
         FIntVector CopyNumber = FIntVector(x, y, z);
-        FVector Offset = FVector(x * AreaSize.X + Border.X, y * AreaSize.Y + Border.Y, z * AreaSize.Z + Border.Z);
+        FVector Offset = FVector(x * AreaSize.X + Border.X, y * AreaSize.Y + Border.Y, z * AreaSize.Z + Border.Z + Ramp.X * x + Ramp.Y * y);
         if(Count.X.Reversed)
             Offset.X = -Offset.X;
         if(Count.Y.Reversed)
