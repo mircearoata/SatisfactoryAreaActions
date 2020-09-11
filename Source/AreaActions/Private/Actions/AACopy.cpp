@@ -33,7 +33,8 @@ void AAACopy::Run_Implementation() {
 
 void AAACopy::OnCancel_Implementation()
 {
-	this->CopyBuildingsComponent->RemoveCopy(0);
+    if(PreviewExists)
+	    this->CopyBuildingsComponent->RemoveCopy(0);
 }
 
 void AAACopy::Preview()
