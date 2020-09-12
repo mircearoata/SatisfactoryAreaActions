@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "FGBuildable.h"
+#include "SaveCustomVersion.h"
 // #include "FGBuildableHologram.h"
 #include "AACopyBuildingsComponent.generated.h"
 
@@ -25,12 +26,78 @@ struct FRotatedBoundingBox
 };
 
 USTRUCT()
-struct FPreviewBuildings
+struct FCopyPreview
 {
 	GENERATED_BODY()
 
 	UPROPERTY()
-	TMap<AFGBuildable* , AFGBuildable*> Buildings;
+	TMap<UObject* , UObject*> Objects;
+};
+
+// Reimplementation of how I think FSaveCollectorArchive works
+// can't wait for modular build
+struct FObjectCollector : FArchive
+{
+	TArray<UObject*>* AllObjects;
+	UObject* CurrentObject;
+
+	FObjectCollector(TArray<UObject*>* AllObjects)
+	{
+		SetIsSaving(true);
+		ArIsSaveGame = true;
+		UsingCustomVersion(FSaveCustomVersion::GUID);
+		this->AllObjects = AllObjects;
+		this->CurrentObject = nullptr;
+	}
+
+	void GetAllObjects(TArray<UObject*>& Root)
+	{
+		for(UObject* Object : Root)
+		{
+			CurrentObject = Object;
+			Object->Serialize(*this);
+			this->AllObjects->AddUnique(Object);
+		}
+	}
+	
+	bool ShouldSave(UObject* Object) const
+	{
+		if(!CurrentObject) return true;
+		if(AActor* Actor = Cast<AActor>(CurrentObject))
+		{
+			if(Actor->GetOwner() == Object) return false;
+		}
+		return true;
+	}
+	
+	virtual FArchive& operator<<(UObject*& Value) override
+	{
+		if(Value->Implements<UFGSaveInterface>() && ShouldSave(Value))
+			this->AllObjects->AddUnique(Value);
+		return *this;
+	}
+	virtual FArchive& operator<<(FLazyObjectPtr& Value) override
+	{
+		if(Value.IsValid() && Value.Get()->Implements<UFGSaveInterface>() && ShouldSave(Value.Get()))
+			this->AllObjects->AddUnique(Value.Get());
+		return *this;
+	}
+	virtual FArchive& operator<<(FSoftObjectPtr& Value) override
+	{
+		if(Value.IsValid() && Value.Get()->Implements<UFGSaveInterface>() && ShouldSave(Value.Get()))
+			this->AllObjects->AddUnique(Value.Get());
+		return *this;
+	}
+	virtual FArchive& operator<<(FSoftObjectPath& Value) override
+	{
+		return *this;
+	}
+	virtual FArchive& operator<<(FWeakObjectPtr& Value) override
+	{
+		if(Value.IsValid() && Value.Get()->Implements<UFGSaveInterface>() && ShouldSave(Value.Get()))
+			this->AllObjects->AddUnique(Value.Get());
+		return *this;
+	}
 };
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -43,7 +110,7 @@ public:
 
 	bool SetActors(TArray<AActor*>& Actors, TArray<AFGBuildable*>& OutBuildingsWithIssues);
 	bool SetBuildings(TArray<AFGBuildable*>& Buildings, TArray<AFGBuildable*>& OutBuildingsWithIssues);
-	bool ValidateBuildings(TArray<AFGBuildable*>& OutBuildingsWithIssues);
+	bool ValidateObjects(TArray<AFGBuildable*>& OutBuildingsWithIssues);
 
 	FORCEINLINE FVector GetBuildingsCenter() const { return BuildingsBounds.Center; }
 	FORCEINLINE FRotatedBoundingBox GetBounds() const { return BuildingsBounds; }
@@ -65,12 +132,12 @@ private:
 	int32 CurrentId;
 	
 	UPROPERTY()
-	TArray<AFGBuildable*> OriginalBuildings;
+	TArray<UObject*> Original;
 
 	TArray<TPair<FVector, FRotator>> CopyLocations;
 
 	UPROPERTY()
-	TMap<int32, FPreviewBuildings> BuildingsPreview;
+	TMap<int32, FCopyPreview> Preview;
 
 	TSet<UProperty*> ValidCheckSkipProperties;
 
