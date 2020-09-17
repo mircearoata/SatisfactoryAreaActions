@@ -588,14 +588,25 @@ int UAACopyBuildingsComponent::AddCopy(const FVector Offset, const FRotator Rota
             FActorSpawnParameters Params;
             Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
             Params.bDeferConstruction = true;
-            AActor* NewActor = this->GetWorld()->SpawnActor<AActor>(Actor->GetClass(), NewTransform, Params);
+            Params.Owner = Actor->GetOwner();
+            AActor* NewActor;
+            if(AFGBuildable* Buildable = Cast<AFGBuildable>(Actor))
+            {
+                NewActor = AFGBuildableSubsystem::Get(GetWorld())->BeginSpawnBuildable(Buildable->GetClass(), NewTransform);
+            }
+            else
+            {
+                NewActor = this->GetWorld()->SpawnActor<AActor>(Actor->GetClass(), NewTransform, Params);
+            }
             NewActor->bDeferBeginPlay = true;
             NewActor->FinishSpawning(FTransform::Identity, true);
             PreviewObject = NewActor;
         }
         else
         {
-            PreviewObject = NewObject<UObject>(this->Preview[CurrentId].Objects[Object->GetOuter()], Object->GetClass(), FName(*Object->GetName()), Object->GetFlags());
+            PreviewObject = FindObject<UObject>(this->Preview[CurrentId].Objects[Object->GetOuter()], *Object->GetName());
+            if(!PreviewObject)
+                PreviewObject = NewObject<UObject>(this->Preview[CurrentId].Objects[Object->GetOuter()], Object->GetClass(), FName(*Object->GetName()), Object->GetFlags());
         }
         this->Preview[CurrentId].Objects.Add(Object, PreviewObject);
     }

@@ -40,6 +40,7 @@ struct FObjectCollector : FArchive
 {
 	TArray<UObject*>* AllObjects;
 	UObject* CurrentObject;
+	TArray<UObject*> RootObjects;
 
 	FObjectCollector(TArray<UObject*>* AllObjects)
 	{
@@ -52,11 +53,31 @@ struct FObjectCollector : FArchive
 
 	void GetAllObjects(TArray<UObject*>& Root)
 	{
+		RootObjects = Root;
 		for(UObject* Object : Root)
 		{
 			CurrentObject = Object;
 			Object->Serialize(*this);
 			this->AllObjects->AddUnique(Object);
+		}
+	}
+
+private:
+	void AddObject(UObject* Object)
+	{
+		if(!this->AllObjects->Contains(Object))
+		{
+			this->AllObjects->Add(Object);
+			UObject* Parent = Object;
+			while(!Parent->IsA<ULevel>()) //Somehow GetOuter doesn't go further than this
+			{
+				if(this->RootObjects.Contains(Parent))
+				{
+					Object->Serialize(*this);
+					break;
+				}
+				Parent = Object->GetOuter();
+			}
 		}
 	}
 	
@@ -70,22 +91,23 @@ struct FObjectCollector : FArchive
 		return true;
 	}
 	
+public:
 	virtual FArchive& operator<<(UObject*& Value) override
 	{
 		if(Value->Implements<UFGSaveInterface>() && ShouldSave(Value))
-			this->AllObjects->AddUnique(Value);
+			this->AddObject(Value);
 		return *this;
 	}
 	virtual FArchive& operator<<(FLazyObjectPtr& Value) override
 	{
 		if(Value.IsValid() && Value.Get()->Implements<UFGSaveInterface>() && ShouldSave(Value.Get()))
-			this->AllObjects->AddUnique(Value.Get());
+			this->AddObject(Value.Get());
 		return *this;
 	}
 	virtual FArchive& operator<<(FSoftObjectPtr& Value) override
 	{
 		if(Value.IsValid() && Value.Get()->Implements<UFGSaveInterface>() && ShouldSave(Value.Get()))
-			this->AllObjects->AddUnique(Value.Get());
+			this->AddObject(Value.Get());
 		return *this;
 	}
 	virtual FArchive& operator<<(FSoftObjectPath& Value) override
@@ -95,7 +117,7 @@ struct FObjectCollector : FArchive
 	virtual FArchive& operator<<(FWeakObjectPtr& Value) override
 	{
 		if(Value.IsValid() && Value.Get()->Implements<UFGSaveInterface>() && ShouldSave(Value.Get()))
-			this->AllObjects->AddUnique(Value.Get());
+			this->AddObject(Value.Get());
 		return *this;
 	}
 };
