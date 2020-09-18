@@ -2,6 +2,9 @@
 
 #include "AACopyBuildingsComponent.h"
 
+
+#include "AAObjectCollectorArchive.h"
+#include "AAObjectReferenceArchive.h"
 #include "SML/util/Logging.h"
 #include "FGColoredInstanceMeshProxy.h"
 #include "FGFactorySettings.h"
@@ -57,7 +60,7 @@ bool UAACopyBuildingsComponent::SetBuildings(TArray<AFGBuildable*>& Buildings,
     TArray<UObject*> Objects;
     for(AFGBuildable* Building : Buildings)
         Objects.Add(Building);
-    FObjectCollector ObjectCollector(&this->Original);
+    FAAObjectCollectorArchive ObjectCollector(&this->Original);
     ObjectCollector.GetAllObjects(Objects);
 
     SML::TopologicalSort::DirectedGraph<UObject*> DependencyGraph;
@@ -78,7 +81,20 @@ bool UAACopyBuildingsComponent::SetBuildings(TArray<AFGBuildable*>& Buildings,
     this->Original = topologicalSort(DependencyGraph);
     const bool Ret = ValidateObjects(OutBuildingsWithIssues);
     if(Ret)
+    {
         CalculateBounds();
+        
+        FMemoryWriter ActorWriter = FMemoryWriter(Serialized, true);
+        FAAObjectReferenceArchive Ar(ActorWriter, this->Original);
+    
+        for(UObject* Object : this->Original)
+        {
+            Ar.SetIsLoading(false);
+            Ar.SetIsSaving(true);
+            Ar.ArIsSaveGame = true;
+            Object->Serialize(Ar);
+        }
+    }
     return Ret;
 }
 
@@ -376,31 +392,18 @@ FTransform TransformAroundPoint(const FTransform Original, const FVector Offset,
 
 void UAACopyBuildingsComponent::FixReferencesForCopy(const int CopyId)
 {
+    TArray<UObject*> PreviewObjects;
     for(UObject* Object : this->Original)
     {
         UObject* NewObject = this->Preview[CopyId].GetObject(Object);
         PreLoadGame(NewObject);
         PreSaveGame(Object);
-    }
-    
-    TArray<uint8> SerializedBytes;
-    FMemoryWriter ActorWriter = FMemoryWriter(SerializedBytes, true);
-    FCopyArchive Ar(ActorWriter, this->Original);
-    TArray<UObject*> PreviewObjects;
-    
-    for(UObject* Object : this->Original)
-    {
-        Ar.SetIsLoading(false);
-        Ar.SetIsSaving(true);
-        Ar.ArIsSaveGame = true;
-        Object->Serialize(Ar);
-        
-        UObject* NewObject = this->Preview[CopyId].GetObject(Object);
+
         PreviewObjects.Add(NewObject);
     }
-
-    FMemoryReader ActorReader = FMemoryReader(SerializedBytes, true);
-    FCopyArchive Ar2(ActorReader, PreviewObjects);
+    
+    FMemoryReader ActorReader = FMemoryReader(Serialized, true);
+    FAAObjectReferenceArchive Ar2(ActorReader, PreviewObjects);
     for(UObject* Object : this->Original)
     {
         UObject* NewObject = this->Preview[CopyId].GetObject(Object);
