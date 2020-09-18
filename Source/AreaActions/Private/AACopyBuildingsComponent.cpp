@@ -335,177 +335,6 @@ bool UAACopyBuildingsComponent::ValidateObjects(TArray<AFGBuildable*>& OutBuildi
     return OutBuildingsWithIssues.Num() == 0;
 }
 
-void CopyBySerialization(UObject* From, UObject* To)
-{
-    TArray<uint8> SerializedBytes;
-    FMemoryWriter ActorWriter = FMemoryWriter(SerializedBytes, true);
-    FObjectAndNameAsStringProxyArchive Ar(ActorWriter, true);
-    Ar.SetIsLoading(false);
-    Ar.SetIsSaving(true);
-    Ar.ArIsSaveGame = true;
-    From->Serialize(Ar);
-
-    FMemoryReader ActorReader = FMemoryReader(SerializedBytes, true);
-    FObjectAndNameAsStringProxyArchive Ar2(ActorReader, true);
-    Ar2.SetIsLoading(true);
-    Ar2.SetIsSaving(false);
-    Ar2.ArIsSaveGame = true;
-    To->Serialize(Ar2);
-}
-
-template <typename T>
-T* GetObjectReplaceReference(T* Obj, T* From, T* To)
-{
-    if (Obj == From)
-        return To;
-
-    FString NewName = Obj->GetPathName();
-    if (!NewName.Contains(*(From->GetPathName() + "."))) return nullptr;
-
-    NewName = NewName.Replace(*(From->GetPathName() + "."), *(To->GetPathName() + "."));
-    return FindObject<T>(nullptr, *NewName);
-}
-
-void FixReferencesToObject(UObject* From, UObject* To, TMap<UObject*, UObject*>& NewObjects)
-{
-    for (TFieldIterator<UObjectPropertyBase> PropertyIterator(From->GetClass()); PropertyIterator; ++PropertyIterator)
-    {
-        UObjectPropertyBase* Property = *PropertyIterator;
-        if (Property->HasAllPropertyFlags(CPF_SaveGame))
-        {
-            for (int i = 0; i < Property->ArrayDim; i++)
-            {
-                void* OriginalValuePtr = Property->ContainerPtrToValuePtr<void>(From, i);
-                void* PreviewValuePtr = Property->ContainerPtrToValuePtr<void>(To, i);
-                UObject* Original = Property->GetObjectPropertyValue(OriginalValuePtr);
-
-                if (!Original) continue;
-
-                UObject* NewObject = nullptr;
-                if(Original->IsA<UClass>())
-                    NewObject = Original;
-                else
-                    NewObject = NewObjects[Original];
-                Property->SetObjectPropertyValue(PreviewValuePtr, NewObject);
-            }
-        }
-    }
-
-    for (TFieldIterator<UArrayProperty> PropertyIterator(From->GetClass()); PropertyIterator; ++PropertyIterator)
-    {
-        UArrayProperty* Property = *PropertyIterator;
-        if (Property->HasAllPropertyFlags(CPF_SaveGame))
-        {
-            UProperty* InnerProperty = Property->Inner;
-            if (InnerProperty->IsA<UObjectPropertyBase>())
-            {
-                UObjectPropertyBase* CastedInnerProperty = Cast<UObjectPropertyBase>(InnerProperty);
-                void* OriginalArr = Property->ContainerPtrToValuePtr<void>(From);
-                void* PreviewArr = Property->ContainerPtrToValuePtr<void>(To);
-                FScriptArrayHelper OriginalArrayHelper(Property, OriginalArr);
-                FScriptArrayHelper PreviewArrayHelper(Property, PreviewArr);
-                PreviewArrayHelper.Resize(OriginalArrayHelper.Num());
-
-                for (int i = 0; i < OriginalArrayHelper.Num(); i++)
-                {
-                    UObject* Original = CastedInnerProperty->GetObjectPropertyValue(OriginalArrayHelper.GetRawPtr(i));
-                    if (!Original) continue;
-
-                    UObject* NewObject = nullptr;
-                    if(Original->IsA<UClass>())
-                        NewObject = Original;
-                    else
-                        NewObject = NewObjects[Original];
-                    CastedInnerProperty->SetObjectPropertyValue(PreviewArrayHelper.GetRawPtr(i), NewObject);
-                }
-            }
-        }
-    }
-
-    for (TFieldIterator<UMapProperty> PropertyIterator(From->GetClass()); PropertyIterator; ++PropertyIterator)
-    {
-        UMapProperty* Property = *PropertyIterator;
-        if (Property->HasAllPropertyFlags(CPF_SaveGame))
-        {
-            UProperty* KeyProp = Property->KeyProp;
-            UProperty* ValProp = Property->ValueProp;
-            bool bIsKeyObject = KeyProp->IsA<UObjectPropertyBase>();
-            bool bIsValObject = ValProp->IsA<UObjectPropertyBase>();
-            if (bIsKeyObject || bIsValObject)
-            {
-                UObjectPropertyBase* CastedInnerProperty = Cast<UObjectPropertyBase>(KeyProp);
-                void* OriginalMap = Property->ContainerPtrToValuePtr<void>(From);
-                void* PreviewMap = Property->ContainerPtrToValuePtr<void>(To);
-                FScriptMapHelper OriginalMapHelper(Property, OriginalMap);
-                FScriptMapHelper PreviewMapHelper(Property, PreviewMap);
-                for (int i = 0; i < OriginalMapHelper.Num(); i++)
-                    PreviewMapHelper.AddPair(OriginalMapHelper.GetKeyPtr(i), OriginalMapHelper.GetValuePtr(i)); // Is this right?
-                for (int i = 0; i < OriginalMapHelper.Num(); i++)
-                {
-                    if (bIsKeyObject)
-                    {
-                        UObject* Original = CastedInnerProperty->GetObjectPropertyValue(OriginalMapHelper.GetKeyPtr(i));
-                        if (!Original) continue;
-
-                        UObject* NewObject = nullptr;
-                        if(Original->IsA<UClass>())
-                            NewObject = Original;
-                        else
-                            NewObject = NewObjects[Original];
-                        CastedInnerProperty->SetObjectPropertyValue(PreviewMapHelper.GetKeyPtr(i), NewObject);
-                    }
-                    if (bIsValObject)
-                    {
-                        UObject* Original = CastedInnerProperty->GetObjectPropertyValue(
-                            OriginalMapHelper.GetValuePtr(i));
-                        if (!Original) continue;
-
-                        UObject* NewObject = nullptr;
-                        if(Original->IsA<UClass>())
-                            NewObject = Original;
-                        else
-                            NewObject = NewObjects[Original];
-                        CastedInnerProperty->SetObjectPropertyValue(PreviewMapHelper.GetValuePtr(i), NewObject);
-                    }
-                }
-                PreviewMapHelper.Rehash();
-            }
-        }
-    }
-
-    for (TFieldIterator<USetProperty> PropertyIterator(From->GetClass()); PropertyIterator; ++PropertyIterator)
-    {
-        USetProperty* Property = *PropertyIterator;
-        if (Property->HasAllPropertyFlags(CPF_SaveGame))
-        {
-            UProperty* KeyProp = Property->ElementProp;
-            if (KeyProp->IsA<UObjectPropertyBase>())
-            {
-                UObjectPropertyBase* CastedInnerProperty = Cast<UObjectPropertyBase>(KeyProp);
-                void* OriginalSet = Property->ContainerPtrToValuePtr<void>(From);
-                void* PreviewSet = Property->ContainerPtrToValuePtr<void>(To);
-                FScriptSetHelper OriginalSetHelper(Property, OriginalSet);
-                FScriptSetHelper PreviewSetHelper(Property, PreviewSet);
-                for (int i = 0; i < OriginalSetHelper.Num(); i++)
-                    PreviewSetHelper.AddUninitializedValue();
-                for (int i = 0; i < OriginalSetHelper.Num(); i++)
-                {
-                    UObject* Original = CastedInnerProperty->GetObjectPropertyValue(OriginalSetHelper.GetElementPtr(i));
-                    if (!Original) continue;
-
-                    UObject* NewObject = nullptr;
-                    if(Original->IsA<UClass>())
-                        NewObject = Original;
-                    else
-                        NewObject = NewObjects[Original];
-                    CastedInnerProperty->SetObjectPropertyValue(PreviewSetHelper.GetElementPtr(i), NewObject);
-                }
-                PreviewSetHelper.Rehash();
-            }
-        }
-    }
-}
-
 void PreSaveGame(UObject* Object)
 {
     if (Object->Implements<UFGSaveInterface>())
@@ -549,28 +378,41 @@ void UAACopyBuildingsComponent::FixReferencesForCopy(const int CopyId)
 {
     for(UObject* Object : this->Original)
     {
-        UObject* NewObject = this->Preview[CopyId].Objects[Object];
+        UObject* NewObject = this->Preview[CopyId].GetObject(Object);
         PreLoadGame(NewObject);
         PreSaveGame(Object);
     }
     
+    TArray<uint8> SerializedBytes;
+    FMemoryWriter ActorWriter = FMemoryWriter(SerializedBytes, true);
+    FCopyArchive Ar(ActorWriter, this->Original);
+    TArray<UObject*> PreviewObjects;
+    
     for(UObject* Object : this->Original)
     {
-        UObject* NewObject = this->Preview[CopyId].Objects[Object];
+        Ar.SetIsLoading(false);
+        Ar.SetIsSaving(true);
+        Ar.ArIsSaveGame = true;
+        Object->Serialize(Ar);
+        
+        UObject* NewObject = this->Preview[CopyId].GetObject(Object);
+        PreviewObjects.Add(NewObject);
+    }
 
-        CopyBySerialization(Object, NewObject);
+    FMemoryReader ActorReader = FMemoryReader(SerializedBytes, true);
+    FCopyArchive Ar2(ActorReader, PreviewObjects);
+    for(UObject* Object : this->Original)
+    {
+        UObject* NewObject = this->Preview[CopyId].GetObject(Object);
+        Ar2.SetIsLoading(true);
+        Ar2.SetIsSaving(false);
+        Ar2.ArIsSaveGame = true;
+        NewObject->Serialize(Ar2);
     }
     
     for(UObject* Object : this->Original)
     {
-        UObject* NewObject = this->Preview[CopyId].Objects[Object];
-
-        FixReferencesToObject(Object, NewObject, this->Preview[CopyId].Objects);
-    }
-    
-    for(UObject* Object : this->Original)
-    {
-        UObject* NewObject = this->Preview[CopyId].Objects[Object];
+        UObject* NewObject = this->Preview[CopyId].GetObject(Object);
         PostLoadGame(NewObject);
         PostSaveGame(Object);
     }
@@ -581,7 +423,7 @@ int UAACopyBuildingsComponent::AddCopy(const FVector Offset, const FRotator Rota
     this->Preview.Add(CurrentId);
     for(UObject* Object : this->Original)
     {
-        UObject* PreviewObject = nullptr;
+        UObject* PreviewObject;
         if(AActor* Actor = Cast<AActor>(Object))
         {
             FTransform NewTransform = TransformAroundPoint(Actor->GetActorTransform(), Relative ? BuildingsBounds.Rotation.RotateVector(Offset) : Offset, Rotation, RotationCenter);
@@ -591,32 +433,32 @@ int UAACopyBuildingsComponent::AddCopy(const FVector Offset, const FRotator Rota
             Params.Owner = Actor->GetOwner();
             AActor* NewActor;
             if(AFGBuildable* Buildable = Cast<AFGBuildable>(Actor))
-            {
                 NewActor = AFGBuildableSubsystem::Get(GetWorld())->BeginSpawnBuildable(Buildable->GetClass(), NewTransform);
-            }
             else
-            {
                 NewActor = this->GetWorld()->SpawnActor<AActor>(Actor->GetClass(), NewTransform, Params);
-            }
             NewActor->bDeferBeginPlay = true;
             NewActor->FinishSpawning(FTransform::Identity, true);
             PreviewObject = NewActor;
         }
         else
         {
-            PreviewObject = FindObject<UObject>(this->Preview[CurrentId].Objects[Object->GetOuter()], *Object->GetName());
+            UObject* Outer = this->Preview[CurrentId].GetObjectChecked(Object->GetOuter());
+            if(Outer != Object->GetOuter())
+                PreviewObject = FindObject<UObject>(this->Preview[CurrentId].GetObjectChecked(Object->GetOuter()), *Object->GetName());
+            else
+                PreviewObject = NewObject<UObject>(this->Preview[CurrentId].GetObjectChecked(Object->GetOuter()), Object->GetClass(), NAME_None, Object->GetFlags());
             if(!PreviewObject)
-                PreviewObject = NewObject<UObject>(this->Preview[CurrentId].Objects[Object->GetOuter()], Object->GetClass(), FName(*Object->GetName()), Object->GetFlags());
+                PreviewObject = NewObject<UObject>(this->Preview[CurrentId].GetObjectChecked(Object->GetOuter()), Object->GetClass(), FName(*Object->GetName()), Object->GetFlags());
         }
-        this->Preview[CurrentId].Objects.Add(Object, PreviewObject);
+        this->Preview[CurrentId].AddObject(Object, PreviewObject);
     }
     
     this->FixReferencesForCopy(CurrentId);
     
     for(UObject* Object : this->Original)
     {
-        UObject* PreviewObject = this->Preview[CurrentId].Objects[Object];
-        if(AActor* NewActor = Cast<AActor>(PreviewObject))
+        UObject* NewObject = this->Preview[CurrentId].GetObject(Object);
+        if(AActor* NewActor = Cast<AActor>(NewObject))
         {
             NewActor->DeferredBeginPlay();
             if(AFGBuildable* NewBuilding = Cast<AFGBuildable>(NewActor))
@@ -641,8 +483,8 @@ void UAACopyBuildingsComponent::MoveCopy(const int CopyId, const FVector Offset,
 {
     for(UObject* Object : this->Original)
     {
-        UObject* PreviewObject = this->Preview[CopyId].Objects[Object];
-        if(AActor* NewActor = Cast<AActor>(PreviewObject))
+        UObject* NewObject = this->Preview[CopyId].GetObject(Object);
+        if(AActor* NewActor = Cast<AActor>(NewObject))
         {
             AActor* Actor = static_cast<AActor*>(Object);
             FTransform NewTransform = TransformAroundPoint(Actor->GetActorTransform(), Relative ? BuildingsBounds.Rotation.RotateVector(Offset) : Offset, Rotation, RotationCenter);
@@ -658,8 +500,8 @@ void UAACopyBuildingsComponent::RemoveCopy(const int CopyId)
 {
     for(UObject* Object : this->Original)
     {
-        UObject* PreviewObject = this->Preview[CopyId].Objects[Object];
-        if(AActor* NewActor = Cast<AActor>(PreviewObject))
+        UObject* NewObject = this->Preview[CopyId].GetObject(Object);
+        if(AActor* NewActor = Cast<AActor>(NewObject))
             NewActor->Destroy();
     }
     this->Preview.Remove(CopyId);
@@ -674,8 +516,8 @@ void UAACopyBuildingsComponent::Finish()
         this->FixReferencesForCopy(CopyId);
         for(UObject* Object : this->Original)
         {
-            UObject* PreviewObject = this->Preview[CopyId].Objects[Object];
-            if(AActor* NewActor = Cast<AActor>(PreviewObject))
+            UObject* NewObject = this->Preview[CopyId].GetObject(Object);
+            if(AActor* NewActor = Cast<AActor>(NewObject))
             {
                 if(AFGBuildable* NewBuilding = Cast<AFGBuildable>(NewActor))
                 {
