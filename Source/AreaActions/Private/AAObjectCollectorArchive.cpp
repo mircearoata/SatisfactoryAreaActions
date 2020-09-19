@@ -51,6 +51,10 @@ bool FAAObjectCollectorArchive::ShouldSave(UObject* Object) const
     {
         if(Actor->GetOwner() == Object) return false;
     }
+    if(AActor* Actor = Cast<AActor>(Object))
+    {
+        if(!RootObjects.Contains(Actor->GetOwner())) return false;
+    }
     return true;
 }
 
