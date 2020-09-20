@@ -84,7 +84,6 @@ public:
 
 private:
 	void FixReferencesForCopy(int CopyId);
-	bool ValidateObject(UObject* Object);
 
 	void CalculateBounds();
 	void SerializeOriginal();

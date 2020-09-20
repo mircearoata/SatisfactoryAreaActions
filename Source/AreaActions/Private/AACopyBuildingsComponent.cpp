@@ -5,6 +5,7 @@
 
 #include "AAObjectCollectorArchive.h"
 #include "AAObjectReferenceArchive.h"
+#include "AAObjectValidatorArchive.h"
 #include "SML/util/Logging.h"
 #include "FGColoredInstanceMeshProxy.h"
 #include "FGFactorySettings.h"
@@ -121,170 +122,6 @@ bool UAACopyBuildingsComponent::SetBuildings(TArray<AFGBuildable*>& Buildings,
     return Ret;
 }
 
-// TODO: Replace with custom FArchive
-bool UAACopyBuildingsComponent::ValidateObject(UObject* Object)
-{
-    for (TFieldIterator<UObjectPropertyBase> PropertyIterator(Object->GetClass()); PropertyIterator; ++PropertyIterator)
-    {
-        UObjectPropertyBase* Property = *PropertyIterator;
-        bool bPropertyValid = true;
-        if (Property->HasAllPropertyFlags(CPF_SaveGame))
-        {
-            for (int i = 0; i < Property->ArrayDim; i++)
-            {
-                void* ValuePtr = Property->ContainerPtrToValuePtr<void>(Object, i);
-                UObject* Value = Property->GetObjectPropertyValue(ValuePtr);
-
-                if (!Value) continue;
-
-                FString Name = Value->GetPathName();
-                if (!Name.StartsWith(GetWorld()->GetPathName())) continue;
-
-                bool bPropertyElementValid = this->Original.Contains(Value);
-
-                if (!bPropertyElementValid)
-                {
-                    SML::Logging::error(*Property->GetPathName(), "[", i, "]=", *Name);
-                    bPropertyValid = false;
-                    break;
-                }
-            }
-        }
-        if (!bPropertyValid)
-            return false;
-    }
-
-    for (TFieldIterator<UArrayProperty> PropertyIterator(Object->GetClass()); PropertyIterator; ++PropertyIterator)
-    {
-        UArrayProperty* Property = *PropertyIterator;
-        bool bPropertyValid = true;
-        if (Property->HasAllPropertyFlags(CPF_SaveGame))
-        {
-            UProperty* InnerProperty = Property->Inner;
-            if (InnerProperty->IsA<UObjectPropertyBase>())
-            {
-                UObjectPropertyBase* CastedInnerProperty = Cast<UObjectPropertyBase>(InnerProperty);
-                void* Arr = Property->ContainerPtrToValuePtr<void>(Object);
-                FScriptArrayHelper ArrayHelper(Property, Arr);
-
-                for (int i = 0; i < ArrayHelper.Num(); i++)
-                {
-                    UObject* Value = CastedInnerProperty->GetObjectPropertyValue(ArrayHelper.GetRawPtr(i));
-                    if (!Value) continue;
-
-                    FString Name = Value->GetPathName();
-                    if (!Name.StartsWith(GetWorld()->GetPathName())) continue;
-
-                    bool bPropertyElementValid = this->Original.Contains(Value);
-
-                    if (!bPropertyElementValid)
-                    {
-                        SML::Logging::error(*Property->GetPathName(), "[", i, "]=", *Name);
-                        bPropertyValid = false;
-                        break;
-                    }
-                }
-            }
-        }
-        if (!bPropertyValid)
-            return false;
-    }
-
-    for (TFieldIterator<UMapProperty> PropertyIterator(Object->GetClass()); PropertyIterator; ++PropertyIterator)
-    {
-        UMapProperty* Property = *PropertyIterator;
-        bool bPropertyValid = true;
-        if (Property->HasAllPropertyFlags(CPF_SaveGame))
-        {
-            UProperty* KeyProp = Property->KeyProp;
-            UProperty* ValProp = Property->ValueProp;
-            bool bIsKeyObject = KeyProp->IsA<UObjectPropertyBase>();
-            bool bIsValObject = ValProp->IsA<UObjectPropertyBase>();
-            if (bIsKeyObject || bIsValObject)
-            {
-                UObjectPropertyBase* CastedInnerProperty = Cast<UObjectPropertyBase>(KeyProp);
-                void* Map = Property->ContainerPtrToValuePtr<void>(Object);
-                FScriptMapHelper MapHelper(Property, Map);
-                for (int i = 0; i < MapHelper.Num(); i++)
-                {
-                    if (bIsKeyObject)
-                    {
-                        UObject* Value = CastedInnerProperty->GetObjectPropertyValue(MapHelper.GetKeyPtr(i));
-                        if (!Value) continue;
-
-                        FString Name = Value->GetPathName();
-                        if (!Name.StartsWith(GetWorld()->GetPathName())) continue;
-
-                        bool bPropertyElementValid = this->Original.Contains(Value);
-
-                        if (!bPropertyElementValid)
-                        {
-                            SML::Logging::error(*Property->GetPathName(), "[", i, "]=", *Name);
-                            bPropertyValid = false;
-                            break;
-                        }
-                    }
-                    if (bIsValObject)
-                    {
-                        UObject* Value = CastedInnerProperty->GetObjectPropertyValue(MapHelper.GetValuePtr(i));
-                        if (!Value) continue;
-
-                        FString Name = Value->GetPathName();
-                        if (!Name.StartsWith(GetWorld()->GetPathName())) continue;
-
-                        bool bPropertyElementValid = this->Original.Contains(Value);
-
-                        if (!bPropertyElementValid)
-                        {
-                            SML::Logging::error(*Property->GetPathName(), "[", i, "]=", *Name);
-                            bPropertyValid = false;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        if (!bPropertyValid)
-            return false;
-    }
-
-    for (TFieldIterator<USetProperty> PropertyIterator(Object->GetClass()); PropertyIterator; ++PropertyIterator)
-    {
-        USetProperty* Property = *PropertyIterator;
-        bool bPropertyValid = true;
-        if (Property->HasAllPropertyFlags(CPF_SaveGame))
-        {
-            UProperty* KeyProp = Property->ElementProp;
-            if (KeyProp->IsA<UObjectPropertyBase>())
-            {
-                UObjectPropertyBase* CastedInnerProperty = Cast<UObjectPropertyBase>(KeyProp);
-                void* Set = Property->ContainerPtrToValuePtr<void>(Object);
-                FScriptSetHelper SetHelper(Property, Set);
-                for (int i = 0; i < SetHelper.Num(); i++)
-                {
-                    UObject* Value = CastedInnerProperty->GetObjectPropertyValue(SetHelper.GetElementPtr(i));
-                    if (!Value) continue;
-
-                    FString Name = Value->GetPathName();
-                    if (!Name.StartsWith(GetWorld()->GetPathName())) continue;
-
-                    bool bPropertyElementValid = this->Original.Contains(Value);
-
-                    if (!bPropertyElementValid)
-                    {
-                        SML::Logging::error(*Property->GetPathName(), "[", i, "]=", *Name);
-                        bPropertyValid = false;
-                        break;
-                    }
-                }
-            }
-        }
-        if (!bPropertyValid)
-            return false;
-    }
-    return true;
-}
-
 void UAACopyBuildingsComponent::CalculateBounds()
 {
     TMap<float, uint32> RotationCount;
@@ -383,8 +220,9 @@ void UAACopyBuildingsComponent::SerializeOriginal()
 
 bool UAACopyBuildingsComponent::ValidateObjects(TArray<AFGBuildable*>& OutBuildingsWithIssues)
 {
+    FAAObjectValidatorArchive ObjectValidator = FAAObjectValidatorArchive(this->Original);
     for (UObject* Object : this->Original)
-        if (!ValidateObject(Object))
+        if (!ObjectValidator.Validate(Object))
         {
             UObject* ParentBuilding = Object;
             while(ParentBuilding && !ParentBuilding->IsA<AFGBuildable>())
