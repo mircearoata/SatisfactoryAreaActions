@@ -87,6 +87,7 @@ private:
 	bool ValidateObject(UObject* Object);
 
 	void CalculateBounds();
+	void SerializeOriginal();
 private:
 	int32 CurrentId;
 	

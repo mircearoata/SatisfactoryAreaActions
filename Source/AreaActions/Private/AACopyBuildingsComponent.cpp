@@ -8,11 +8,44 @@
 #include "SML/util/Logging.h"
 #include "FGColoredInstanceMeshProxy.h"
 #include "FGFactorySettings.h"
-#include "SaveCollectorArchive.h"
 #include "GameFramework/Actor.h"
 #include "util/TopologicalSort.h"
+#include "FGCircuitConnectionComponent.h"
+#include "FGCircuitSubsystem.h"
 
 #pragma optimize("", off)
+
+void PreSaveGame(UObject* Object)
+{
+    if (Object->Implements<UFGSaveInterface>())
+        IFGSaveInterface::Execute_PreSaveGame(
+            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
+            FEngineVersion::Current().GetChangelist());
+}
+
+void PostSaveGame(UObject* Object)
+{
+    if (Object->Implements<UFGSaveInterface>())
+        IFGSaveInterface::Execute_PostSaveGame(
+            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
+            FEngineVersion::Current().GetChangelist());
+}
+
+void PreLoadGame(UObject* Object)
+{
+    if (Object->Implements<UFGSaveInterface>())
+        IFGSaveInterface::Execute_PreLoadGame(
+            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
+            FEngineVersion::Current().GetChangelist());
+}
+
+void PostLoadGame(UObject* Object)
+{
+    if (Object->Implements<UFGSaveInterface>())
+        IFGSaveInterface::Execute_PostLoadGame(
+            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
+            FEngineVersion::Current().GetChangelist());
+}
 
 FVector FRotatedBoundingBox::GetCorner(const uint32 CornerNum) const
 {
@@ -83,21 +116,12 @@ bool UAACopyBuildingsComponent::SetBuildings(TArray<AFGBuildable*>& Buildings,
     if(Ret)
     {
         CalculateBounds();
-        
-        FMemoryWriter ActorWriter = FMemoryWriter(Serialized, true);
-        FAAObjectReferenceArchive Ar(ActorWriter, this->Original);
-    
-        for(UObject* Object : this->Original)
-        {
-            Ar.SetIsLoading(false);
-            Ar.SetIsSaving(true);
-            Ar.ArIsSaveGame = true;
-            Object->Serialize(Ar);
-        }
+        SerializeOriginal();
     }
     return Ret;
 }
 
+// TODO: Replace with custom FArchive
 bool UAACopyBuildingsComponent::ValidateObject(UObject* Object)
 {
     for (TFieldIterator<UObjectPropertyBase> PropertyIterator(Object->GetClass()); PropertyIterator; ++PropertyIterator)
@@ -337,6 +361,26 @@ void UAACopyBuildingsComponent::CalculateBounds()
     this->BuildingsBounds = FRotatedBoundingBox{Center, FVector(FGenericPlatformMath::RoundToFloat(Bounds.X), FGenericPlatformMath::RoundToFloat(Bounds.Y), FGenericPlatformMath::RoundToFloat(Bounds.Z)), Rotation};
 }
 
+void UAACopyBuildingsComponent::SerializeOriginal()
+{
+    for(UObject* Object : Original)
+        PreSaveGame(Object);
+    
+    FMemoryWriter Writer = FMemoryWriter(Serialized, true);
+    FAAObjectReferenceArchive Ar(Writer, this->Original);
+    
+    for(UObject* Object : this->Original)
+    {
+        Ar.SetIsLoading(false);
+        Ar.SetIsSaving(true);
+        Ar.ArIsSaveGame = true;
+        Object->Serialize(Ar);
+    }
+    
+    for(UObject* Object : Original)
+        PostSaveGame(Object);
+}
+
 bool UAACopyBuildingsComponent::ValidateObjects(TArray<AFGBuildable*>& OutBuildingsWithIssues)
 {
     for (UObject* Object : this->Original)
@@ -349,38 +393,6 @@ bool UAACopyBuildingsComponent::ValidateObjects(TArray<AFGBuildable*>& OutBuildi
                 OutBuildingsWithIssues.Add(static_cast<AFGBuildable*>(ParentBuilding));
         }
     return OutBuildingsWithIssues.Num() == 0;
-}
-
-void PreSaveGame(UObject* Object)
-{
-    if (Object->Implements<UFGSaveInterface>())
-        IFGSaveInterface::Execute_PreSaveGame(
-            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
-            FEngineVersion::Current().GetChangelist());
-}
-
-void PostSaveGame(UObject* Object)
-{
-    if (Object->Implements<UFGSaveInterface>())
-        IFGSaveInterface::Execute_PostSaveGame(
-            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
-            FEngineVersion::Current().GetChangelist());
-}
-
-void PreLoadGame(UObject* Object)
-{
-    if (Object->Implements<UFGSaveInterface>())
-        IFGSaveInterface::Execute_PreLoadGame(
-            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
-            FEngineVersion::Current().GetChangelist());
-}
-
-void PostLoadGame(UObject* Object)
-{
-    if (Object->Implements<UFGSaveInterface>())
-        IFGSaveInterface::Execute_PostLoadGame(
-            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
-            FEngineVersion::Current().GetChangelist());
 }
 
 FTransform TransformAroundPoint(const FTransform Original, const FVector Offset, const FRotator Rotation, const FVector RotationCenter)
@@ -397,13 +409,11 @@ void UAACopyBuildingsComponent::FixReferencesForCopy(const int CopyId)
     {
         UObject* NewObject = this->Preview[CopyId].GetObject(Object);
         PreLoadGame(NewObject);
-        PreSaveGame(Object);
-
         PreviewObjects.Add(NewObject);
     }
     
-    FMemoryReader ActorReader = FMemoryReader(Serialized, true);
-    FAAObjectReferenceArchive Ar2(ActorReader, PreviewObjects);
+    FMemoryReader Reader = FMemoryReader(Serialized, true);
+    FAAObjectReferenceArchive Ar2(Reader, PreviewObjects);
     for(UObject* Object : this->Original)
     {
         UObject* NewObject = this->Preview[CopyId].GetObject(Object);
@@ -417,7 +427,26 @@ void UAACopyBuildingsComponent::FixReferencesForCopy(const int CopyId)
     {
         UObject* NewObject = this->Preview[CopyId].GetObject(Object);
         PostLoadGame(NewObject);
-        PostSaveGame(Object);
+    }
+
+    // Fixes for stuff that doesn't cause issues, but is nice to have
+    {
+        // Fix circuits
+        AFGCircuitSubsystem* CircuitSubsystem = AFGCircuitSubsystem::Get(GetWorld());
+        for(int i = 0; i < PreviewObjects.Num(); i++)
+        {
+            if(UFGCircuitConnectionComponent* Connection = Cast<UFGCircuitConnectionComponent>(PreviewObjects[i]))
+            {
+                if(Connection->GetCircuitID() == -1)
+                {
+                    TArray<UFGCircuitConnectionComponent*> Connections;
+                    Connection->GetConnections(Connections);
+                    Connection->GetHiddenConnections(Connections);
+                    if(Connections.Num() > 0)
+                        CircuitSubsystem->ConnectComponents(Connection, Connections[0]); // This will rebuild the entire circuit
+                }
+            }
+        }
     }
 }
 
