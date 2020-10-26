@@ -320,6 +320,23 @@ void UAACopyBuildingsComponent::FixReferencesForCopy(const int CopyId)
             }
         }
     }
+    // Fix pipes
+    {
+        for(int i = 0; i < PreviewObjects.Num(); i++)
+        {
+            if(UFGPipeConnectionComponent* Connection = Cast<UFGPipeConnectionComponent>(PreviewObjects[i]))
+            {
+                {
+                    UFGPipeConnectionComponentBase* Other = Connection->GetConnection();
+                    if(Other)
+                    {
+                        Connection->ClearConnection();
+                        Connection->SetConnection(Other);
+                    }
+                }
+            }
+        }
+    }
 }
 
 int UAACopyBuildingsComponent::AddCopy(const FVector Offset, const FRotator Rotation, const FVector RotationCenter, const bool Relative)

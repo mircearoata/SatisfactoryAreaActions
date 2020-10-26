@@ -55,6 +55,7 @@ bool FAAObjectCollectorArchive::ShouldSave(UObject* Object) const
     {
         if(!RootObjects.Contains(Actor->GetOwner())) return false;
     }
+    if(Object->HasAnyFlags(RF_WasLoaded)) return false;
     return true;
 }
 
