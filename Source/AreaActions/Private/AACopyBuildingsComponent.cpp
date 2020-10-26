@@ -6,6 +6,8 @@
 #include "AAObjectCollectorArchive.h"
 #include "AAObjectReferenceArchive.h"
 #include "AAObjectValidatorArchive.h"
+#include "FGBuildableManufacturer.h"
+#include "FGBuildableConveyorBase.h"
 #include "SML/util/Logging.h"
 #include "FGColoredInstanceMeshProxy.h"
 #include "FGFactorySettings.h"
@@ -13,6 +15,7 @@
 #include "util/TopologicalSort.h"
 #include "FGCircuitConnectionComponent.h"
 #include "FGCircuitSubsystem.h"
+#include "FGPipeConnectionComponent.h"
 
 #pragma optimize("", off)
 
@@ -205,14 +208,11 @@ void UAACopyBuildingsComponent::SerializeOriginal()
     
     FMemoryWriter Writer = FMemoryWriter(Serialized, true);
     FAAObjectReferenceArchive Ar(Writer, this->Original);
+    Ar.SetIsLoading(false);
+    Ar.SetIsSaving(true);
     
     for(UObject* Object : this->Original)
-    {
-        Ar.SetIsLoading(false);
-        Ar.SetIsSaving(true);
-        Ar.ArIsSaveGame = true;
         Object->Serialize(Ar);
-    }
     
     for(UObject* Object : Original)
         PostSaveGame(Object);
@@ -252,12 +252,11 @@ void UAACopyBuildingsComponent::FixReferencesForCopy(const int CopyId)
     
     FMemoryReader Reader = FMemoryReader(Serialized, true);
     FAAObjectReferenceArchive Ar2(Reader, PreviewObjects);
+    Ar2.SetIsLoading(true);
+    Ar2.SetIsSaving(false);
     for(UObject* Object : this->Original)
     {
         UObject* NewObject = this->Preview[CopyId].GetObject(Object);
-        Ar2.SetIsLoading(true);
-        Ar2.SetIsSaving(false);
-        Ar2.ArIsSaveGame = true;
         NewObject->Serialize(Ar2);
     }
     
@@ -267,6 +266,41 @@ void UAACopyBuildingsComponent::FixReferencesForCopy(const int CopyId)
         PostLoadGame(NewObject);
     }
 
+    // Remove items
+    {
+        for(UObject* Object : this->Original)
+        {
+            if(AFGBuildable* Buildable = Cast<AFGBuildable>(this->Preview[CopyId].GetObject(Object)))
+            {
+                {
+                    // Remove items from inventories
+                    TArray<UFGInventoryComponent*> BuildingInventories;
+                    Buildable->GetComponents<UFGInventoryComponent>(BuildingInventories);
+                
+                    if(AFGBuildableFactory* FactoryBuildable = Cast<AFGBuildableFactory>(Buildable))
+                    {
+                        BuildingInventories.Remove(FactoryBuildable->mInventoryPotential); // Keep potential inventory
+                    }
+                
+                    for(UFGInventoryComponent* InventoryComponent : BuildingInventories)
+                    {
+                        for(int i = 0; i < InventoryComponent->GetSizeLinear(); i++)
+                            InventoryComponent->RemoveAllFromIndex(i);
+                    }
+                }
+                {
+                    // Remove items from conveyors
+                    if(AFGBuildableConveyorBase* ConveyorBase = Cast<AFGBuildableConveyorBase>(Buildable))
+                    {
+                        for(int i = ConveyorBase->mItems.Num() - 1; i >= 0; i--)
+                            ConveyorBase->mItems.FlagForRemoveAt(i);
+                        ConveyorBase->mPendingUpdateItemTransforms = true;
+                    }
+                }
+            }
+        }
+    }
+    
     // Fixes for stuff that doesn't cause issues, but is nice to have
     {
         // Fix circuits
@@ -377,10 +411,98 @@ void UAACopyBuildingsComponent::RemoveCopy(const int CopyId)
     this->Preview.Remove(CopyId);
 }
 
-void UAACopyBuildingsComponent::Finish()
+bool CheckItems(TMap<TSubclassOf<UFGItemDescriptor>, int32> RemainingItems, TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems, const bool TakeItems = false)
 {
+    if(TakeItems)
+    {
+        if(!CheckItems(RemainingItems, Inventories, OutMissingItems, false))
+            return false;
+    }
+    
+    for(UFGInventoryComponent* Inventory : Inventories)
+    {
+        TArray<FInventoryStack> Stacks;
+        Inventory->GetInventoryStacks(Stacks);
+        for(FInventoryStack& Stack : Stacks)
+        {
+            if(!Stack.HasItems()) continue;
+            if(RemainingItems.Contains(Stack.Item.ItemClass))
+            {
+                const int TakenItems = FGenericPlatformMath::Min(Stack.NumItems, RemainingItems[Stack.Item.ItemClass]);
+                RemainingItems[Stack.Item.ItemClass] -= TakenItems;
+                if(RemainingItems[Stack.Item.ItemClass] == 0)
+                    RemainingItems.Remove(Stack.Item.ItemClass);
+                if(TakeItems)
+                    Inventory->Remove(Stack.Item.ItemClass, TakenItems);
+            }
+        }
+    }
+
+    if(RemainingItems.Num() != 0)
+    {
+        for(const auto ItemAmount : RemainingItems)
+            OutMissingItems.Add(FInventoryStack(ItemAmount.Value, ItemAmount.Key));
+        return false;
+    }
+    return true;
+}
+
+bool UAACopyBuildingsComponent::TryTakeItems(TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems)
+{
+    if(this->Preview.Num() == 0)
+        return true;
+    
     TArray<int> CopyIds;
     this->Preview.GetKeys(CopyIds);
+    const int FirstCopy = CopyIds[0];
+    
+    const bool UseBuildCosts = !static_cast<AFGGameState*>(GetWorld()->GetGameState())->GetCheatNoCost();
+    TMap<TSubclassOf<UFGItemDescriptor>, int32> ItemsPerCopy;
+    for(UObject* Object : this->Original)
+    {
+        if(AFGBuildable* Buildable = Cast<AFGBuildable>(Object))
+        {
+            {
+                if(UseBuildCosts)
+                {
+                    TArray<FItemAmount> BuildingIngredients = UFGRecipe::GetIngredients(Buildable->GetBuiltWithRecipe());
+                    for(const FItemAmount ItemAmount : BuildingIngredients)
+                        ItemsPerCopy.FindOrAdd(ItemAmount.ItemClass) += ItemAmount.Amount;
+                }
+            }
+            {
+                TArray<UFGInventoryComponent*> BuildingInventories;
+                this->Preview[FirstCopy].GetObject(Buildable)->GetComponents<UFGInventoryComponent>(BuildingInventories);
+                for(UFGInventoryComponent* InventoryComponent : BuildingInventories)
+                {
+                    TArray<FInventoryStack> Stacks;
+                    InventoryComponent->GetInventoryStacks(Stacks);
+                    for(const FInventoryStack Stack : Stacks)
+                        if(Stack.HasItems())
+                            ItemsPerCopy.FindOrAdd(Stack.Item.ItemClass) += Stack.NumItems;
+                }
+            }
+        }
+    }
+    
+    TMap<TSubclassOf<UFGItemDescriptor>, int32> TotalItems;
+    for(auto ItemAmount : ItemsPerCopy)
+        TotalItems.Add(ItemAmount.Key, ItemAmount.Value * this->Preview.Num());
+
+    return CheckItems(TotalItems, Inventories, OutMissingItems, true);
+}
+
+bool UAACopyBuildingsComponent::Finish(TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems)
+{
+    if(this->Preview.Num() == 0)
+        return true;
+    
+    TArray<int> CopyIds;
+    this->Preview.GetKeys(CopyIds);
+
+    if(!TryTakeItems(Inventories, OutMissingItems))
+        return false;
+   
     for (int32 CopyId : CopyIds)
     {
         this->FixReferencesForCopy(CopyId);
@@ -423,5 +545,6 @@ void UAACopyBuildingsComponent::Finish()
             }
         }
     }
+    return true;
 }
 #pragma optimize("", on)

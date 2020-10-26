@@ -2,6 +2,7 @@
 
 #include "AAEquipment.h"
 #include "FGOutlineComponent.h"
+#include "FGPlayerController.h"
 
 AAAFill::AAAFill() {
     this->CopyBuildingsComponent = CreateDefaultSubobject<UAACopyBuildingsComponent>(TEXT("CopyBuildings"));
@@ -71,8 +72,34 @@ void AAAFill::Preview()
 void AAAFill::Finish()
 {
     this->Preview();
-    this->CopyBuildingsComponent->Finish();
-    this->Done();
+    TArray<UFGInventoryComponent*> Inventories;
+    TArray<FInventoryStack> MissingItems;
+    Inventories.Add(static_cast<AFGCharacterPlayer*>(this->AAEquipment->GetOwningController()->GetPawn())->GetInventory());
+    if(!this->CopyBuildingsComponent->Finish(Inventories, MissingItems))
+    {
+        FString MissingItemsString = TEXT("");
+        for(const auto Stack : MissingItems)
+        {
+            MissingItemsString += FString::Printf(
+                TEXT("%s%d %s"), MissingItemsString.Len() != 0 ? TEXT(", ") : TEXT(""),
+                Stack.NumItems,
+                *UFGItemDescriptor::GetItemName(Stack.Item.ItemClass).ToString());
+        }
+        FOnMessageOk MessageOk;
+        MessageOk.BindDynamic(this, &AAAFill::RemoveMissingItemsWidget);
+        const FText Message = FText::FromString(FString::Printf(TEXT("Missing items: %s"), *MissingItemsString));
+        MissingItemsWidget = this->AAEquipment->CreateActionMessageOk(Message, MessageOk);
+        this->AAEquipment->AddActionWidget(MissingItemsWidget);
+    }
+    else
+        this->Done();
 }
+
+void AAAFill::RemoveMissingItemsWidget()
+{
+    this->AAEquipment->RemoveActionWidget(MissingItemsWidget);
+    MissingItemsWidget = nullptr;
+}
+
 
 FFillAxis FFillAxis::None = FFillAxis();

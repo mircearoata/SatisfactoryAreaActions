@@ -74,6 +74,9 @@ public:
 	
     UFUNCTION(BlueprintCallable)
     void Finish();
+
+    UFUNCTION()
+    void RemoveMissingItemsWidget();
    
 private:
     UPROPERTY()
@@ -86,4 +89,7 @@ private:
     FVector2D Ramp;
     
     TMap<FIntVector, int32> CopyId;
+
+    UPROPERTY()
+    UWidget* MissingItemsWidget;
 };

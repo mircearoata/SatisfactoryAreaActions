@@ -7,6 +7,7 @@
 FAAObjectReferenceArchive::FAAObjectReferenceArchive(FArchive& InnerArchive, TArray<UObject*> InObjects): FObjectAndNameAsStringProxyArchive(
     InnerArchive, false)
 {
+    ArIsSaveGame = true;
     this->Objects = InObjects;
     UsingCustomVersion(FSaveCustomVersion::GUID);
 }

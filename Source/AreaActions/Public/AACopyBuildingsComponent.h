@@ -5,8 +5,6 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "FGBuildable.h"
-#include "SaveCustomVersion.h"
-// #include "FGBuildableHologram.h"
 #include "AACopyBuildingsComponent.generated.h"
 
 USTRUCT()
@@ -30,23 +28,25 @@ struct FCopyPreview
 {
 	GENERATED_BODY()
 
-	UObject* GetObjectChecked(UObject* Obj, const bool IncludeOriginal = true)
+	template<typename T>
+	T* GetObjectChecked(T* Obj, const bool IncludeOriginal = true)
 	{
-		UObject* Outer = Obj;
+		T* Outer = Obj;
 		while(Outer && !Objects.Contains(Outer))
 			Outer = Outer->GetOuter();
 		if(Outer == Obj)
-			return Objects[Obj];
+			return Cast<T>(Objects[Obj]);
 		if(Outer)
-			return FindObject<UObject>(Objects[Outer], *Obj->GetPathName(Outer));
+			return FindObject<T>(Objects[Outer], *Obj->GetPathName(Outer));
 		if(IncludeOriginal)
 			return Obj;
 		return nullptr;
 	}
 
-	FORCEINLINE UObject* GetObject(UObject* Obj)
+	template<class T>
+	FORCEINLINE T* GetObject(T* Obj)
 	{
-		return Objects[Obj];
+		return Cast<T>(Objects[Obj]);
 	}
 
 	FORCEINLINE void AddObject(UObject* Original, UObject* Copy)
@@ -79,14 +79,17 @@ public:
 	void MoveCopy(int CopyId, FVector Offset, FRotator Rotation, FVector RotationCenter, bool Relative = true);
 	FORCEINLINE void MoveCopy(const int CopyId, const FVector Offset, const FRotator Rotation, const bool Relative = true) { this->MoveCopy(CopyId, Offset, Rotation, GetBuildingsCenter(), Relative); }
 	void RemoveCopy(int CopyId);
-	
-	void Finish();
+
+	bool Finish(TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems);
 
 private:
 	void FixReferencesForCopy(int CopyId);
 
 	void CalculateBounds();
 	void SerializeOriginal();
+	
+	bool TryTakeItems(TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems);
+	
 private:
 	int32 CurrentId;
 	

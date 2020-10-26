@@ -46,6 +46,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void Finish();
+
+	UFUNCTION()
+    void RemoveMissingItemsWidget();
 private:
 	UPROPERTY()
 	UAACopyBuildingsComponent* CopyBuildingsComponent;
@@ -56,4 +59,7 @@ private:
 	bool IsRotationCenterSet;
 
 	bool PreviewExists;
+
+	UPROPERTY()
+	UWidget* MissingItemsWidget;
 };
