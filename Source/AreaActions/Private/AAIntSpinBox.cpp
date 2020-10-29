@@ -43,6 +43,50 @@ void UAAIntSpinBox::ReleaseSlateResources(bool bReleaseChildren)
 	MySpinBox.Reset();
 }
 
+/** Default numeric type interface */
+template<typename NumericType>
+struct TFixStaticNumericInterface : INumericTypeInterface<NumericType>
+{
+	const FNumberFormattingOptions NumberFormattingOptions = FNumberFormattingOptions()
+            .SetUseGrouping(false)
+            .SetMinimumFractionalDigits(TIsIntegral<NumericType>::Value ? 0 : 1)
+            .SetMaximumFractionalDigits(TIsIntegral<NumericType>::Value ? 0 : 7);
+	const FString ValidChars = TEXT("1234567890()-+=\\/.,*^%%");
+	const FBasicMathExpressionEvaluator Parser;
+	
+	/** Convert the type to/from a string */
+	virtual FString ToString(const NumericType& Value) const override
+	{
+		return FastDecimalFormat::NumberToString(Value, ExpressionParser::GetLocalizedNumberFormattingRules(), NumberFormattingOptions);
+	}
+	virtual TOptional<NumericType> FromString(const FString& InString, const NumericType& InExistingValue) override
+	{
+		TValueOrError<double, FExpressionError> Result = Parser.Evaluate(*InString, double(InExistingValue));
+		if (Result.IsValid())
+		{
+			return NumericType(Result.GetValue());
+		}
+
+		return TOptional<NumericType>();
+	}
+
+	/** Check whether the typed character is valid */
+	virtual bool IsCharacterValid(TCHAR InChar) const override
+	{
+		auto IsValidLocalizedCharacter = [InChar]() -> bool
+		{
+			const FDecimalNumberFormattingRules& NumberFormattingRules = ExpressionParser::GetLocalizedNumberFormattingRules();
+			return InChar == NumberFormattingRules.GroupingSeparatorCharacter
+                || InChar == NumberFormattingRules.DecimalSeparatorCharacter
+                || Algo::Find(NumberFormattingRules.DigitCharacters, InChar) != 0;
+		};
+
+		return InChar != 0 && (ValidChars.GetCharArray().Contains(InChar) || IsValidLocalizedCharacter());
+	}
+
+public:
+};
+
 TSharedRef<SWidget> UAAIntSpinBox::RebuildWidget()
 {
 	MySpinBox = SNew(SSpinBox<int32>)
@@ -55,6 +99,7 @@ TSharedRef<SWidget> UAAIntSpinBox::RebuildWidget()
 	.OnValueCommitted(BIND_UOBJECT_DELEGATE(FOnInt32ValueCommitted, HandleOnValueCommitted))
 	.OnBeginSliderMovement(BIND_UOBJECT_DELEGATE(FSimpleDelegate, HandleOnBeginSliderMovement))
 	.OnEndSliderMovement(BIND_UOBJECT_DELEGATE(FOnInt32ValueChanged, HandleOnEndSliderMovement))
+	.TypeInterface(MakeShareable(new TFixStaticNumericInterface<int32>()))
 	;
 	
 	return MySpinBox.ToSharedRef();
