@@ -35,14 +35,25 @@ void AAAMassDismantle::Dismantle()
     int32 ItemCount = 0;
     for(const FInventoryStack Stack : this->Refunds)
         ItemCount += Stack.NumItems;
-    
-    FOnMessageYes MessageYes;
-    MessageYes.BindDynamic(this, &AAAMassDismantle::GiveRefunds);
-    FOnMessageNo MessageNo;
-    MessageNo.BindDynamic(this, &AAAMassDismantle::Done);
-    const FText Message = FText::FromString(FString::Printf(TEXT("Do you want to receive the refunds (%d items) in a crate near you?"), ItemCount));
-    RefundsWidget = this->AAEquipment->CreateActionMessageYesNo(Message, MessageYes, MessageNo);
-    this->AAEquipment->AddActionWidget(RefundsWidget);
+
+    if(ItemCount > 0)
+    {
+        FOnMessageYes MessageYes;
+        MessageYes.BindDynamic(this, &AAAMassDismantle::GiveRefunds);
+        FOnMessageNo MessageNo;
+        MessageNo.BindDynamic(this, &AAAMassDismantle::Done);
+        const FText Message = FText::FromString(FString::Printf(TEXT("Do you want to receive the refunds (%d items) in a crate near you?"), ItemCount));
+        RefundsWidget = this->AAEquipment->CreateActionMessageYesNo(Message, MessageYes, MessageNo);
+        this->AAEquipment->AddActionWidget(RefundsWidget);
+    }
+    else
+    {
+        FOnMessageOk MessageOk;
+        MessageOk.BindDynamic(this, &AAAMassDismantle::Done);
+        const FText Message = FText::FromString(TEXT("No refunds are available."));
+        RefundsWidget = this->AAEquipment->CreateActionMessageOk(Message, MessageOk);
+        this->AAEquipment->AddActionWidget(RefundsWidget);
+    }
 }
 
 void AAAMassDismantle::GiveRefunds()
