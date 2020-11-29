@@ -73,13 +73,13 @@ UAACopyBuildingsComponent::UAACopyBuildingsComponent()
     ValidCheckSkipProperties.Add(AActor::StaticClass()->FindPropertyByName(TEXT("Owner")));
 }
 
-bool UAACopyBuildingsComponent::SetActors(TArray<AActor*>& Actors, TArray<AFGBuildable*>& OutBuildingsWithIssues)
+bool UAACopyBuildingsComponent::SetActors(TArray<AActor*>& Actors, TArray<AFGBuildable*>& OutBuildingsWithIssues, FText& Error)
 {
     TArray<AFGBuildable*> Buildings;
     for (AActor* Actor : Actors)
         if (Actor->IsA<AFGBuildable>())
             Buildings.Add(static_cast<AFGBuildable*>(Actor));
-    return SetBuildings(Buildings, OutBuildingsWithIssues);
+    return SetBuildings(Buildings, OutBuildingsWithIssues, Error);
 }
 
 
@@ -92,8 +92,14 @@ void SafeAddEdge(SML::TopologicalSort::DirectedGraph<UObject*>& DependencyGraph,
 }
 
 bool UAACopyBuildingsComponent::SetBuildings(TArray<AFGBuildable*>& Buildings,
-                                             TArray<AFGBuildable*>& OutBuildingsWithIssues)
+                                             TArray<AFGBuildable*>& OutBuildingsWithIssues,
+                                             FText& Error)
 {
+    if(Buildings.Num() == 0)
+    {
+        Error = FText::FromString(TEXT("No buildings in the area."));
+        return false;
+    }
     TArray<UObject*> Objects;
     for(AFGBuildable* Building : Buildings)
         Objects.Add(Building);

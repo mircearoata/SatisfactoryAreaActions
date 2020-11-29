@@ -67,8 +67,8 @@ class AREAACTIONS_API UAACopyBuildingsComponent : public UActorComponent
 public:
 	UAACopyBuildingsComponent();
 
-	bool SetActors(TArray<AActor*>& Actors, TArray<AFGBuildable*>& OutBuildingsWithIssues);
-	bool SetBuildings(TArray<AFGBuildable*>& Buildings, TArray<AFGBuildable*>& OutBuildingsWithIssues);
+	bool SetActors(TArray<AActor*>& Actors, TArray<AFGBuildable*>& OutBuildingsWithIssues, FText& Error);
+	bool SetBuildings(TArray<AFGBuildable*>& Buildings, TArray<AFGBuildable*>& OutBuildingsWithIssues, FText& Error);
 	bool ValidateObjects(TArray<AFGBuildable*>& OutBuildingsWithIssues);
 
 	FORCEINLINE FVector GetBuildingsCenter() const { return BuildingsBounds.Center; }

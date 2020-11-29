@@ -10,17 +10,28 @@ AAAFill::AAAFill() {
 
 void AAAFill::Run_Implementation() {
     TArray<AFGBuildable*> BuildingsWithIssues;
-    if (!this->CopyBuildingsComponent->SetActors(this->Actors, BuildingsWithIssues)) {
-        TArray<AActor*> AsActors;
-        for (AFGBuildable* Building : BuildingsWithIssues) {
-            AsActors.Add(Building);
+    FText Error;
+    if (!this->CopyBuildingsComponent->SetActors(this->Actors, BuildingsWithIssues, Error)) {
+        if(!Error.IsEmpty())
+        {
+            FOnMessageOk MessageOk;
+            MessageOk.BindDynamic(this, &AAAFill::Done);
+            UWidget* MessageOkWidget = this->AAEquipment->CreateActionMessageOk(Error, MessageOk);
+            this->AAEquipment->AddActionWidget(MessageOkWidget);
         }
-        UFGOutlineComponent::Get(GetWorld())->ShowDismantlePendingMaterial(AsActors);
-        FOnMessageOk MessageOk;
-        MessageOk.BindDynamic(this, &AAAFill::Done);
-        const FText Message = FText::FromString(TEXT("Some buildings cannot be copied because they have connections to buildings outside the selected area. Remove the connections temporary, or include the connected buildings in the area. The buildings are highlighted."));
-        UWidget* MessageOkWidget = this->AAEquipment->CreateActionMessageOk(Message, MessageOk);
-        this->AAEquipment->AddActionWidget(MessageOkWidget);
+        else
+        {
+            TArray<AActor*> AsActors;
+            for (AFGBuildable* Building : BuildingsWithIssues) {
+                AsActors.Add(Building);
+            }
+            UFGOutlineComponent::Get(GetWorld())->ShowDismantlePendingMaterial(AsActors);
+            FOnMessageOk MessageOk;
+            MessageOk.BindDynamic(this, &AAAFill::Done);
+            const FText Message = FText::FromString(TEXT("Some buildings cannot be copied because they have connections to buildings outside the selected area. Remove the connections temporary, or include the connected buildings in the area. The buildings are highlighted."));
+            UWidget* MessageOkWidget = this->AAEquipment->CreateActionMessageOk(Message, MessageOk);
+            this->AAEquipment->AddActionWidget(MessageOkWidget);
+        }
     }
     else {
         this->AreaSize = this->CopyBuildingsComponent->GetBounds().Extents * 2;
