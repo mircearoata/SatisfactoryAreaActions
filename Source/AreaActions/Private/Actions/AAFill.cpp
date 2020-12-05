@@ -55,7 +55,7 @@ void AAAFill::Preview()
         if(x == 0 && y == 0 && z == 0)
             continue;
         FIntVector CopyNumber = FIntVector(x, y, z);
-        FVector Offset = FVector(x * AreaSize.X + Border.X, y * AreaSize.Y + Border.Y, z * AreaSize.Z + Border.Z + Ramp.X * x + Ramp.Y * y);
+        FVector Offset = FVector(x * (AreaSize.X + Border.X), y * (AreaSize.Y + Border.Y), z * (AreaSize.Z + Border.Z) + Ramp.X * x + Ramp.Y * y);
         if(Count.X.Reversed)
             Offset.X = -Offset.X;
         if(Count.Y.Reversed)
