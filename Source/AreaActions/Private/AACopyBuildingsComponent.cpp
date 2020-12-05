@@ -299,8 +299,8 @@ void UAACopyBuildingsComponent::FixReferencesForCopy(const int CopyId)
                     if(AFGBuildableConveyorBase* ConveyorBase = Cast<AFGBuildableConveyorBase>(Buildable))
                     {
                         for(int i = ConveyorBase->mItems.Num() - 1; i >= 0; i--)
-                            ConveyorBase->mItems.FlagForRemoveAt(i);
-                        ConveyorBase->mPendingUpdateItemTransforms = true;
+                            if(ConveyorBase->mItems.IsValidIndex(i))
+                                ConveyorBase->Factory_RemoveItemAtAccessor(i);
                     }
                 }
             }
