@@ -7,6 +7,8 @@
 #include "FGSaveInterface.h"
 #include "AASavedSubsystem.h"
 #include "AAActionsManager.h"
+#include "AAMigrationSubsystem.h"
+
 #include "AASubsystemManager.generated.h"
 
 /**
@@ -28,6 +30,7 @@ public:
 
 	FORCEINLINE AAASavedSubsystem* GetSavedSubsystem() const { return SavedSubsystem; }
 	FORCEINLINE AAAActionsManager* GetActionsManager() const { return ActionsManager; }
+	FORCEINLINE AAAMigrationSubsystem* GetMigrationSubsystem() const { return MigrationSubsystem; }
 
 private:
 	UPROPERTY(SaveGame)
@@ -35,6 +38,9 @@ private:
 
 	UPROPERTY(SaveGame)
 	AAAActionsManager* ActionsManager;
+	
+	UPROPERTY(SaveGame)
+	AAAMigrationSubsystem* MigrationSubsystem;
 
 private:
 	UPROPERTY(EditDefaultsOnly)
@@ -42,4 +48,7 @@ private:
 	
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AAAActionsManager> ActionsManagerClass;
+	
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<AAAMigrationSubsystem> MigrationSubsystemClass;
 };

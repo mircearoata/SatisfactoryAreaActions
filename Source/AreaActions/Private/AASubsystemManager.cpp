@@ -18,6 +18,9 @@ void AAASubsystemManager::BeginPlay() {
 	if (!ActionsManager) {
 		ActionsManager = GetWorld()->SpawnActor<AAAActionsManager>(ActionsManagerClass, FVector::ZeroVector, FRotator::ZeroRotator);
 	}
+	if (!MigrationSubsystem) {
+		MigrationSubsystem = GetWorld()->SpawnActor<AAAMigrationSubsystem>(MigrationSubsystemClass, FVector::ZeroVector, FRotator::ZeroRotator);
+	}
 }
 
 AAASubsystemManager* AAASubsystemManager::Get(UObject* WorldContextObject) {
