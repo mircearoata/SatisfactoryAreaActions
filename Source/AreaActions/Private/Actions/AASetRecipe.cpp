@@ -4,6 +4,17 @@
 #include "AAEquipment.h"
 #include "FGBuildableManufacturer.h"
 
+bool ManufacturerAcceptsRecipe(TSubclassOf<AFGBuildableManufacturer> ManufacturerClass, TSubclassOf<UFGRecipe> Recipe)
+{
+    TArray<TSubclassOf<UObject>> ProducedIn = UFGRecipe::GetProducedIn(Recipe);
+    for(TSubclassOf<UObject> Producer : ProducedIn)
+    {
+        if((*ManufacturerClass)->IsChildOf(*Producer))
+            return true;
+    }
+    return false;
+}
+
 void AAASetRecipe::SetRecipe(const TSubclassOf<UFGRecipe> SelectedRecipe)
 {
     if (!SelectedRecipe)
@@ -14,13 +25,13 @@ void AAASetRecipe::SetRecipe(const TSubclassOf<UFGRecipe> SelectedRecipe)
     TMap<TSubclassOf<AFGBuildableManufacturer>, int> Statistics;
     for (AActor* Actor : this->Actors)
     {
-        if (Actor->IsA<AFGBuildableManufacturer>())
+        if (AFGBuildableManufacturer* Manufacturer = Cast<AFGBuildableManufacturer>(Actor))
         {
-            if (UFGRecipe::GetProducedIn(SelectedRecipe).Contains(Actor->GetClass()))
+            if (ManufacturerAcceptsRecipe(Manufacturer->GetClass(), SelectedRecipe))
             {
-                static_cast<AFGBuildableManufacturer*>(Actor)->GetInputInventory()->Empty();
-                static_cast<AFGBuildableManufacturer*>(Actor)->GetOutputInventory()->Empty();
-                static_cast<AFGBuildableManufacturer*>(Actor)->SetRecipe(SelectedRecipe);
+                Manufacturer->GetInputInventory()->Empty();
+                Manufacturer->GetOutputInventory()->Empty();
+                Manufacturer->SetRecipe(SelectedRecipe);
 
                 Statistics.FindOrAdd(Actor->GetClass())++;
             }
