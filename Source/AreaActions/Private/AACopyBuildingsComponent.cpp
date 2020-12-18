@@ -175,13 +175,13 @@ void UAACopyBuildingsComponent::CalculateBounds()
                 FActorSpawnParameters Params;
                 Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
                 Params.bDeferConstruction = true;
-                AFGBuildable* PreviewBuilding = this->GetWorld()->SpawnActor<AFGBuildable>(
-                    Buildable->GetClass(), FTransform::Identity, Params);
-                PreviewBuilding->bDeferBeginPlay = true;
-                PreviewBuilding->FinishSpawning(FTransform::Identity, true);
+                FTransform TempBuildingTransform = FTransform(FQuat::Identity, FVector::ZeroVector, Buildable->GetActorScale3D());
+                AFGBuildable* TempBuilding = this->GetWorld()->SpawnActor<AFGBuildable>(Buildable->GetClass(), TempBuildingTransform, Params);
+                TempBuilding->bDeferBeginPlay = true;
+                TempBuilding->FinishSpawning(TempBuildingTransform, true);
                 FVector Origin;
                 FVector Extents;
-                PreviewBuilding->GetActorBounds(true, Origin, Extents);
+                TempBuilding->GetActorBounds(true, Origin, Extents);
                 Extents = FVector(FGenericPlatformMath::RoundToFloat(Extents.X), FGenericPlatformMath::RoundToFloat(Extents.Y), FGenericPlatformMath::RoundToFloat(Extents.Z));
 
                 for(int i = 0; i < (1 << 3); i++)
@@ -193,7 +193,7 @@ void UAACopyBuildingsComponent::CalculateBounds()
                     Min = Min.ComponentMin(Rotation.UnrotateVector(Buildable->GetActorLocation() + Buildable->GetActorRotation().RotateVector(Origin + Corner)));
                     Max = Max.ComponentMax(Rotation.UnrotateVector(Buildable->GetActorLocation() + Buildable->GetActorRotation().RotateVector(Origin + Corner)));
                 }
-                PreviewBuilding->Destroy();
+                TempBuilding->Destroy();
             }
         }
 
