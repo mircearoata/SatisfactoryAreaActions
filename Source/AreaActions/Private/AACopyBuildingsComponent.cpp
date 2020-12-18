@@ -242,7 +242,7 @@ bool UAACopyBuildingsComponent::ValidateObjects(TArray<AFGBuildable*>& OutBuildi
 FTransform TransformAroundPoint(const FTransform Original, const FVector Offset, const FRotator Rotation, const FVector RotationCenter)
 {
     const FVector NewLocation = Rotation.RotateVector(Original.GetLocation() - RotationCenter) + RotationCenter + Offset;
-    const FRotator NewRotation = Original.Rotator() + Rotation;
+    const FQuat NewRotation = Rotation.Quaternion() * Original.GetRotation();
     return FTransform(NewRotation, NewLocation, Original.GetScale3D());
 }
 
