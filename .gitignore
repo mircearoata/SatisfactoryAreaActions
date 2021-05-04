@@ -1,7 +1,9 @@
 *
 !*/
-!Content/AreaActions/**/*
-!Source/AreaActions/**/*
+!Plugins/AreaActions/**/*
+Plugins/*/Binaries/*
+Plugins/*/Intermediate/*
+Plugins/*/Saved/*
 !FactoryGame.uproject
 !LICENSE
 !README.md
