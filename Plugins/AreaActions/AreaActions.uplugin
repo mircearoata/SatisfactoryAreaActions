@@ -1,0 +1,25 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.6.5",
+    "SemVersion": "1.6.5",
+	"FriendlyName": "Area Actions",
+	"Description": "Do stuff that usually takes too long, with just a few clicks",
+	"Category": "Modding",
+	"CreatedBy": "Mircea Roata",
+	"CreatedByURL": "https://github.com/mircearoata/SatisfactoryAreaActions",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+    "Plugins": [
+        {
+            "Name": "SML",
+            "SemVersion": "^3.0.0",
+            "Enabled": true
+        }
+    ]
+}
