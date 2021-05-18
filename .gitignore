@@ -7,3 +7,4 @@ Plugins/*/Saved/*
 !FactoryGame.uproject
 !LICENSE
 !README.md
+!.gitignore
