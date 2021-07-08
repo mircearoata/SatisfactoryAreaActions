@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Buildables/FGBuildable.h"
+#include "Hologram/FGBuildableHologram.h"
+
 #include "AACopyBuildingsComponent.generated.h"
 
 USTRUCT()
@@ -24,12 +26,12 @@ struct FRotatedBoundingBox
 };
 
 USTRUCT()
-struct FCopyPreview
+struct FCopyMap
 {
 	GENERATED_BODY()
 
 	template<typename T>
-	T* GetObjectChecked(T* Obj, const bool IncludeOriginal = true)
+	T* GetObjectChecked(T* Obj, const bool IncludeOriginal = true) const
 	{
 		T* Outer = Obj;
 		while(Outer && !Objects.Contains(Outer))
@@ -44,7 +46,7 @@ struct FCopyPreview
 	}
 
 	template<class T>
-	FORCEINLINE T* GetObject(T* Obj)
+	FORCEINLINE T* GetObject(T* Obj) const
 	{
 		return Cast<T>(Objects[Obj]);
 	}
@@ -57,6 +59,39 @@ struct FCopyPreview
 private:
 	UPROPERTY()
 	TMap<UObject*, UObject*> Objects;
+};
+
+USTRUCT()
+struct FCopyPreview
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TMap<AFGBuildable*, AFGBuildableHologram*> Holograms;
+};
+
+USTRUCT()
+struct FCopyLocation
+{
+	GENERATED_BODY()
+
+	FCopyLocation() : FCopyLocation(FVector::ZeroVector, FRotator::ZeroRotator, FVector::ZeroVector) {}
+
+	FCopyLocation(const FVector& Offset, const FRotator& Rotation, const FVector& RotationCenter, const bool Relative = false)
+		: Offset(Offset)
+		, Rotation(Rotation)
+		, RotationCenter(RotationCenter)
+		, Relative(Relative) {}
+
+	bool operator==(FCopyLocation& Other) const
+	{
+		return Offset == Other.Offset && Rotation == Other.Rotation && RotationCenter == Other.RotationCenter && Relative == Other.Relative;
+	}
+	
+	FVector Offset;
+	FRotator Rotation;
+	FVector RotationCenter;
+	bool Relative;
 };
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -83,7 +118,7 @@ public:
 	bool Finish(TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems);
 
 private:
-	void FixReferencesForCopy(int CopyId);
+	void FixReferencesForCopy(const FCopyMap& Copy);
 
 	void CalculateBounds();
 	void SerializeOriginal();
@@ -96,12 +131,12 @@ private:
 	UPROPERTY()
 	TArray<UObject*> Original;
 
-	TArray<TPair<FVector, FRotator>> CopyLocations;
+	TMap<int32, FCopyLocation> CopyLocations;
 
 	UPROPERTY()
 	TMap<int32, FCopyPreview> Preview;
 
-	TSet<UProperty*> ValidCheckSkipProperties;
+	TSet<FProperty*> ValidCheckSkipProperties;
 	
 	TArray<uint8> Serialized;
 

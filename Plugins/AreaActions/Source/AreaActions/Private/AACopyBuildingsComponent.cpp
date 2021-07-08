@@ -17,9 +17,6 @@
 #include "TopologicalSort/TopologicalSort.h"
 #include "FGGameState.h"
 #include "FGProductionIndicatorInstanceComponent.h"
-#include "Components/ProxyInstancedStaticMeshComponent.h"
-
-#pragma optimize("", off)
 
 void PreSaveGame(UObject* Object)
 {
@@ -105,13 +102,14 @@ bool UAACopyBuildingsComponent::SetBuildings(TArray<AFGBuildable*>& Buildings,
     TArray<UObject*> Objects;
     for(AFGBuildable* Building : Buildings)
         Objects.Add(Building);
-    FAAObjectCollectorArchive ObjectCollector(&this->Original);
+	TArray<UObject*> AllObjects;
+    FAAObjectCollectorArchive ObjectCollector(&AllObjects);
     ObjectCollector.GetAllObjects(Objects);
 
     TDirectedGraph<UObject*> DependencyGraph;
-    for(UObject* Object : this->Original)
+    for(UObject* Object : AllObjects)
         DependencyGraph.AddNode(Object);
-    for(UObject* Object : this->Original)
+    for(UObject* Object : AllObjects)
     {
         SafeAddEdge(DependencyGraph, Object->GetOuter(), Object);
         TArray<UObject*> Dependencies;
@@ -122,6 +120,8 @@ bool UAACopyBuildingsComponent::SetBuildings(TArray<AFGBuildable*>& Buildings,
             // SML::Logging::warning(*Dependency->GetFullName(), " is a dependency of ", *Object->GetFullName());
         }
     }
+
+    this->Original.Reserve(AllObjects.Num());
     
     FTopologicalSort::TopologicalSort(DependencyGraph, this->Original);
     const bool Ret = ValidateObjects(OutBuildingsWithIssues);
@@ -248,12 +248,12 @@ FTransform TransformAroundPoint(const FTransform Original, const FVector Offset,
     return FTransform(NewRotation, NewLocation, Original.GetScale3D());
 }
 
-void UAACopyBuildingsComponent::FixReferencesForCopy(const int CopyId)
+void UAACopyBuildingsComponent::FixReferencesForCopy(const FCopyMap& Copy)
 {
     TArray<UObject*> PreviewObjects;
     for(UObject* Object : this->Original)
     {
-        UObject* NewObject = this->Preview[CopyId].GetObject(Object);
+        UObject* NewObject = Copy.GetObject(Object);
         PreLoadGame(NewObject);
         PreviewObjects.Add(NewObject);
     }
@@ -264,13 +264,13 @@ void UAACopyBuildingsComponent::FixReferencesForCopy(const int CopyId)
     Ar2.SetIsSaving(false);
     for(UObject* Object : this->Original)
     {
-        UObject* NewObject = this->Preview[CopyId].GetObject(Object);
+        UObject* NewObject = Copy.GetObject(Object);
         NewObject->Serialize(Ar2);
     }
     
     for(UObject* Object : this->Original)
     {
-        UObject* NewObject = this->Preview[CopyId].GetObject(Object);
+        UObject* NewObject = Copy.GetObject(Object);
         PostLoadGame(NewObject);
     }
 
@@ -278,7 +278,7 @@ void UAACopyBuildingsComponent::FixReferencesForCopy(const int CopyId)
     {
         for(UObject* Object : this->Original)
         {
-            if(AFGBuildable* Buildable = Cast<AFGBuildable>(this->Preview[CopyId].GetObject(Object)))
+            if(AFGBuildable* Buildable = Cast<AFGBuildable>(Copy.GetObject(Object)))
             {
                 {
                     // Remove items from inventories
@@ -347,63 +347,20 @@ void UAACopyBuildingsComponent::FixReferencesForCopy(const int CopyId)
     }
 }
 
-void SetMeshInstanced(UMeshComponent* MeshComp, bool Instanced)
-{
-    if (UProxyInstancedStaticMeshComponent* StaticMeshProxy = Cast<UProxyInstancedStaticMeshComponent>(MeshComp)) {
-        StaticMeshProxy->SetInstanced(Instanced);
-    }
-    else if (UFGColoredInstanceMeshProxy* ColoredMeshProxy = Cast<UFGColoredInstanceMeshProxy>(MeshComp)) {
-        ColoredMeshProxy->mBlockInstancing = !Instanced;
-        ColoredMeshProxy->SetInstanced(Instanced);
-    }
-    else if (UFGProductionIndicatorInstanceComponent* ProdIndInst = Cast<UFGProductionIndicatorInstanceComponent>(MeshComp)) {
-        ProdIndInst->SetInstanced(Instanced);
-    }
-}
-
 int UAACopyBuildingsComponent::AddCopy(const FVector Offset, const FRotator Rotation, const FVector RotationCenter, const bool Relative)
 {
+    this->CopyLocations.Add(CurrentId, FCopyLocation(Offset, Rotation, RotationCenter, Relative));
     this->Preview.Add(CurrentId);
     for(UObject* Object : this->Original)
     {
-        UObject* PreviewObject;
-        if(AActor* Actor = Cast<AActor>(Object))
+        if(AFGBuildable* Buildable = Cast<AFGBuildable>(Object))
         {
-            FTransform NewTransform = TransformAroundPoint(Actor->GetActorTransform(), Relative ? BuildingsBounds.Rotation.RotateVector(Offset) : Offset, Rotation, RotationCenter);
-            FActorSpawnParameters Params;
-            Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-            Params.bDeferConstruction = true;
-            Params.Owner = Actor->GetOwner();
-            AActor* NewActor;
-            if(AFGBuildable* Buildable = Cast<AFGBuildable>(Actor))
-                NewActor = AFGBuildableSubsystem::Get(GetWorld())->BeginSpawnBuildable(Buildable->GetClass(), NewTransform);
-            else
-                NewActor = this->GetWorld()->SpawnActor<AActor>(Actor->GetClass(), NewTransform, Params);
-            NewActor->bDeferBeginPlay = true;
-            NewActor->FinishSpawning(FTransform::Identity, true);
-            PreviewObject = NewActor;
-        }
-        else
-        {
-            UObject* Outer = this->Preview[CurrentId].GetObjectChecked(Object->GetOuter());
-            if(Outer != Object->GetOuter())
-                PreviewObject = FindObject<UObject>(this->Preview[CurrentId].GetObjectChecked(Object->GetOuter()), *Object->GetName());
-            else
-                PreviewObject = NewObject<UObject>(this->Preview[CurrentId].GetObjectChecked(Object->GetOuter()), Object->GetClass(), NAME_None, Object->GetFlags());
-            if(!PreviewObject)
-                PreviewObject = NewObject<UObject>(this->Preview[CurrentId].GetObjectChecked(Object->GetOuter()), Object->GetClass(), FName(*Object->GetName()), Object->GetFlags());
-        }
-        this->Preview[CurrentId].AddObject(Object, PreviewObject);
-    }
-    
-    this->FixReferencesForCopy(CurrentId);
-    
-    for(UObject* Object : this->Original)
-    {
-        UObject* NewObject = this->Preview[CurrentId].GetObject(Object);
-        if(AActor* NewActor = Cast<AActor>(NewObject))
-        {
-            NewActor->DeferredBeginPlay();
+            AFGBuildableHologram* Hologram = static_cast<AFGBuildableHologram*>(AFGHologram::SpawnHologramFromRecipe(Buildable->GetBuiltWithRecipe(), GetOwner(), FVector::ZeroVector));
+            FTransform NewTransform = TransformAroundPoint(Buildable->GetActorTransform(), Relative ? BuildingsBounds.Rotation.RotateVector(Offset) : Offset, Rotation, RotationCenter);
+            Hologram->SetActorTransform(NewTransform);
+            Hologram->SetActorHiddenInGame(false);
+            Hologram->SetPlacementMaterial(true);
+            this->Preview[CurrentId].Holograms.Add(Buildable, Hologram);
         }
     }
     return CurrentId++;
@@ -411,46 +368,24 @@ int UAACopyBuildingsComponent::AddCopy(const FVector Offset, const FRotator Rota
 
 void UAACopyBuildingsComponent::MoveCopy(const int CopyId, const FVector Offset, const FRotator Rotation, const FVector RotationCenter, const bool Relative)
 {
-    for(UObject* Object : this->Original)
+    FCopyLocation NewLocation = FCopyLocation(Offset, Rotation, RotationCenter, Relative);
+    if(this->CopyLocations[CopyId] == NewLocation)
+        return;
+    
+    this->CopyLocations[CopyId] = NewLocation;
+    for(const auto& [Buildable, Hologram] : this->Preview[CopyId].Holograms)
     {
-        UObject* NewObject = this->Preview[CopyId].GetObject(Object);
-        if(AActor* NewActor = Cast<AActor>(NewObject))
-        {
-            AActor* Actor = static_cast<AActor*>(Object);
-            FTransform NewTransform = TransformAroundPoint(Actor->GetActorTransform(), Relative ? BuildingsBounds.Rotation.RotateVector(Offset) : Offset, Rotation, RotationCenter);
-            if(AFGBuildable* NewBuilding = Cast<AFGBuildable>(NewActor))
-            {
-                TArray<UMeshComponent*> Meshes;
-                NewBuilding->GetComponents<UMeshComponent>(Meshes);
-                for (UMeshComponent* Mesh : Meshes)
-                    SetMeshInstanced(Mesh, false);
-            }
-            const EComponentMobility::Type CurrentMobility = NewActor->GetRootComponent()->Mobility;
-            NewActor->GetRootComponent()->SetMobility(EComponentMobility::Movable);
-            NewActor->SetActorTransform(NewTransform);
-            NewActor->GetRootComponent()->SetMobility(CurrentMobility);
-            if(AFGBuildable* NewBuilding = Cast<AFGBuildable>(NewActor))
-            {
-                TArray<UMeshComponent*> Meshes;
-                NewBuilding->GetComponents<UMeshComponent>(Meshes);
-                for (UMeshComponent* Mesh : Meshes)
-                    SetMeshInstanced(Mesh, true);
-            }
-        }
+        FTransform NewTransform = TransformAroundPoint(Buildable->GetActorTransform(), Relative ? BuildingsBounds.Rotation.RotateVector(Offset) : Offset, Rotation, RotationCenter);
+        Hologram->SetActorTransform(NewTransform);
     }
 }
 
 void UAACopyBuildingsComponent::RemoveCopy(const int CopyId)
 {
-    for(UObject* Object : this->Original)
-    {
-        UObject* NewObject = this->Preview[CopyId].GetObject(Object);
-        if(AActor* NewActor = Cast<AActor>(NewObject))
-        {
-            NewActor->Destroy();
-        }
-    }
+    for(const auto& [_, Hologram] : this->Preview[CopyId].Holograms)
+        Hologram->Destroy();
     this->Preview.Remove(CopyId);
+    this->CopyLocations.Remove(CopyId);
 }
 
 bool CheckItems(TMap<TSubclassOf<UFGItemDescriptor>, int32> RemainingItems, TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems, const bool TakeItems = false)
@@ -513,12 +448,10 @@ bool UAACopyBuildingsComponent::TryTakeItems(TArray<UFGInventoryComponent*> Inve
                 }
             }
             {
-                TArray<UFGInventoryComponent*> BuildingInventories;
-                this->Preview[FirstCopy].GetObject(Buildable)->GetComponents<UFGInventoryComponent>(BuildingInventories);
-                for(UFGInventoryComponent* InventoryComponent : BuildingInventories)
+                if(AFGBuildableFactory* FactoryBuildable = Cast<AFGBuildableFactory>(Buildable))
                 {
                     TArray<FInventoryStack> Stacks;
-                    InventoryComponent->GetInventoryStacks(Stacks);
+                    FactoryBuildable->mInventoryPotential->GetInventoryStacks(Stacks);
                     for(const FInventoryStack Stack : Stacks)
                         if(Stack.HasItems())
                             ItemsPerCopy.FindOrAdd(Stack.Item.ItemClass) += Stack.NumItems;
@@ -536,57 +469,62 @@ bool UAACopyBuildingsComponent::TryTakeItems(TArray<UFGInventoryComponent*> Inve
 
 bool UAACopyBuildingsComponent::Finish(TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems)
 {
-    if(this->Preview.Num() == 0)
+    if(this->CopyLocations.Num() == 0)
         return true;
-    
-    TArray<int> CopyIds;
-    this->Preview.GetKeys(CopyIds);
 
     if(!TryTakeItems(Inventories, OutMissingItems))
         return false;
-   
-    for (int32 CopyId : CopyIds)
+
+    for(const auto& [CopyId, CopyLocation] : this->CopyLocations)
     {
-        this->FixReferencesForCopy(CopyId);
+        FCopyMap CurrentCopy;
         for(UObject* Object : this->Original)
         {
-            UObject* NewObject = this->Preview[CopyId].GetObject(Object);
+            UObject* NewObj;
+            if(AActor* Actor = Cast<AActor>(Object))
+            {
+                FTransform NewTransform = TransformAroundPoint(Actor->GetActorTransform(), CopyLocation.Relative ? BuildingsBounds.Rotation.RotateVector(CopyLocation.Offset) : CopyLocation.Offset, CopyLocation.Rotation, CopyLocation.RotationCenter);
+                FActorSpawnParameters Params;
+                Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+                Params.bDeferConstruction = true;
+                Params.Owner = Actor->GetOwner();
+                AActor* NewActor;
+                if(AFGBuildable* Buildable = Cast<AFGBuildable>(Actor))
+                    NewActor = AFGBuildableSubsystem::Get(GetWorld())->BeginSpawnBuildable(Buildable->GetClass(), NewTransform);
+                else
+                    NewActor = this->GetWorld()->SpawnActor<AActor>(Actor->GetClass(), NewTransform, Params);
+                NewActor->bDeferBeginPlay = true;
+                NewActor->FinishSpawning(FTransform::Identity, true);
+                NewObj = NewActor;
+            }
+            else
+            {
+                UObject* Outer = CurrentCopy.GetObjectChecked(Object->GetOuter());
+                if(Outer != Object->GetOuter())
+                    NewObj = FindObject<UObject>(CurrentCopy.GetObjectChecked(Object->GetOuter()), *Object->GetName());
+                else
+                    NewObj = NewObject<UObject>(CurrentCopy.GetObjectChecked(Object->GetOuter()), Object->GetClass(), NAME_None, Object->GetFlags());
+                if(!NewObj)
+                    NewObj = NewObject<UObject>(CurrentCopy.GetObjectChecked(Object->GetOuter()), Object->GetClass(), FName(*Object->GetName()), Object->GetFlags());
+            }
+            CurrentCopy.AddObject(Object, NewObj);
+        }
+    
+        this->FixReferencesForCopy(CurrentCopy);
+    
+        for(UObject* Object : this->Original)
+        {
+            UObject* NewObject = CurrentCopy.GetObject(Object);
             if(AActor* NewActor = Cast<AActor>(NewObject))
             {
-                if(AFGBuildable* NewBuilding = Cast<AFGBuildable>(NewActor))
-                {
-                    TArray<UMeshComponent*> Meshes;
-                    NewBuilding->GetComponents<UMeshComponent>(Meshes);
-                    for (UMeshComponent* Mesh : Meshes)
-                    {
-                        // SetMeshInstanced(Mesh, true);
-                        /*UFGColoredInstanceMeshProxy* OriginalMeshComponent = nullptr;
-                        TArray<UFGColoredInstanceMeshProxy*> OriginalColoredInstanceMeshProxies;
-                        NewBuilding->GetComponents<UFGColoredInstanceMeshProxy>(OriginalColoredInstanceMeshProxies);
-                        for (UFGColoredInstanceMeshProxy* OriginalBuildingMesh : OriginalColoredInstanceMeshProxies)
-                        {
-                            if (OriginalBuildingMesh->GetName() == Mesh->GetName())
-                            {
-                                OriginalMeshComponent = OriginalBuildingMesh;
-                                break;
-                            }
-                        }
-
-                        if (!OriginalMeshComponent)
-                        {
-                            // SML::Logging::fatal(*FString::Printf(
-                            //     TEXT("Mesh component %s of %s does not exist. This shouldn't happen!"),
-                            //     *Mesh->GetName(), *Object->GetName())); // I would like SML::Logging::wtf
-                            continue;
-                        }
-                
-                        for (int MatNum = 0; MatNum < Mesh->GetNumMaterials(); MatNum++)
-                            Mesh->SetMaterial(MatNum, OriginalMeshComponent->GetMaterial(MatNum));*/
-                    }
-                }
+                NewActor->DeferredBeginPlay();
             }
         }
+
+        for(const auto& [_, Hologram] : this->Preview[CopyId].Holograms)
+            Hologram->Destroy();
+        this->Preview.Remove(CopyId);
     }
+    this->CopyLocations.Empty();
     return true;
 }
-#pragma optimize("", on)

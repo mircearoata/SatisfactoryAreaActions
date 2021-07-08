@@ -3,6 +3,7 @@
 #include "AAEquipment.h"
 #include "FGOutlineComponent.h"
 #include "FGPlayerController.h"
+#include "Buildables/FGBuildableStorage.h"
 
 AAAFill::AAAFill() {
     this->CopyBuildingsComponent = CreateDefaultSubobject<UAACopyBuildingsComponent>(TEXT("CopyBuildings"));
@@ -85,7 +86,17 @@ void AAAFill::Finish()
     this->Preview();
     TArray<UFGInventoryComponent*> Inventories;
     TArray<FInventoryStack> MissingItems;
-    Inventories.Add(static_cast<AFGCharacterPlayer*>(this->AAEquipment->GetOwningController()->GetPawn())->GetInventory());
+    AFGCharacterPlayer* Player = static_cast<AFGCharacterPlayer*>(this->AAEquipment->GetOwningController()->GetPawn());
+
+    for(TActorIterator<AFGBuildableStorage> StorageIt(GetWorld()); StorageIt; ++StorageIt)
+    {
+        if(FVector::Distance(StorageIt->GetActorLocation(), Player->GetActorLocation()) < 10000)
+        {
+            Inventories.Add(StorageIt->GetInitialStorageInventory());
+        }
+    }
+	
+    Inventories.Add(Player->GetInventory());
     if(!this->CopyBuildingsComponent->Finish(Inventories, MissingItems))
     {
         FString MissingItemsString = TEXT("");
