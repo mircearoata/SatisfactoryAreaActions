@@ -17,10 +17,6 @@ void AAAAction::Cancel()
 	this->Done();
 }
 
-void AAAAction::OnCancel_Implementation()
-{
-}
-
 FText AAAAction::GetActionName(const TSubclassOf<AAAAction> InClass)
 {
 	if(!InClass) return FText::FromString(TEXT("N/A"));
@@ -45,5 +41,22 @@ FSlateBrush AAAAction::GetActionIcon(const TSubclassOf<AAAAction> InClass)
 	return InClass.GetDefaultObject()->Icon;
 }
 
-void AAAAction::PrimaryFire_Implementation() {
+void AAAAction::PrimaryFire_Implementation()
+{
+}
+
+void AAAAction::MouseWheelUp_Implementation()
+{
+}
+
+void AAAAction::SecondaryFire_Implementation()
+{
+}
+
+void AAAAction::OnCancel_Implementation()
+{
+}
+
+void AAAAction::MouseWheelDown_Implementation()
+{
 }

@@ -78,8 +78,8 @@ public:
     UFUNCTION()
     void RemoveMissingItemsWidget();
    
-private:
-    UPROPERTY()
+protected:
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
     UAACopyBuildingsComponent* CopyBuildingsComponent;
 
     FVector AreaSize;

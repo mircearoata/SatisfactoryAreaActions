@@ -11,7 +11,6 @@ AAACopy::AAACopy() {
 	this->CopyBuildingsComponent = CreateDefaultSubobject<UAACopyBuildingsComponent>(TEXT("CopyBuildings"));
 	this->DeltaPosition = FVector::ZeroVector;
 	this->DeltaRotation = FRotator::ZeroRotator;
-	this->PreviewExists = false;
 }
 
 void AAACopy::Run_Implementation() {
@@ -40,23 +39,19 @@ void AAACopy::Run_Implementation() {
 		}
 	}
 	else {
+		this->CopyBuildingsComponent->AddCopy(DeltaPosition, DeltaRotation, Anchor ? Anchor->GetActorLocation() : CopyBuildingsComponent->GetBuildingsCenter());
 		this->ShowCopyWidget();
 	}
 }
 
 void AAACopy::OnCancel_Implementation()
 {
-    if(PreviewExists)
-	    this->CopyBuildingsComponent->RemoveCopy(0);
+	this->CopyBuildingsComponent->RemoveCopy(0);
 }
 
 void AAACopy::Preview()
 {
-	if(!PreviewExists)
-		this->CopyBuildingsComponent->AddCopy(DeltaPosition, DeltaRotation, IsRotationCenterSet ? RotationCenter : CopyBuildingsComponent->GetBuildingsCenter());
-	else
-		this->CopyBuildingsComponent->MoveCopy(0, DeltaPosition, DeltaRotation, IsRotationCenterSet ? RotationCenter : CopyBuildingsComponent->GetBuildingsCenter());
-	PreviewExists = true;
+	this->CopyBuildingsComponent->MoveCopy(0, DeltaPosition, DeltaRotation, Anchor ? Anchor->GetActorLocation() : CopyBuildingsComponent->GetBuildingsCenter());
 }
 
 void AAACopy::Finish()

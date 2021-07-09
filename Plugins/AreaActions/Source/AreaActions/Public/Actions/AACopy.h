@@ -21,21 +21,29 @@ public:
 	virtual void OnCancel_Implementation() override;
 
 	UFUNCTION(BlueprintCallable)
-	void SetDelta(const FVector InDeltaPosition, const FRotator InDeltaRotation, const FVector InRotationCenter, const bool InIsRotationCenterSet)
+	void SetDelta(const FVector InDeltaPosition, const FRotator InDeltaRotation)
 	{
 		this->DeltaPosition = InDeltaPosition;
 		this->DeltaRotation = InDeltaRotation;
-		this->RotationCenter = InRotationCenter;
-		this->IsRotationCenterSet = InIsRotationCenterSet;
+	}
+
+	UFUNCTION(BlueprintCallable)
+	void SetAnchor(AFGBuildable* InAnchor)
+	{
+		this->Anchor = InAnchor;
 	}
 	
 	UFUNCTION(BlueprintPure)
-	void GetDelta(FVector& OutDeltaPosition, FRotator& OutDeltaRotation, FVector& OutRotationCenter, bool& OutIsRotationCenterSet) const
+	void GetDelta(FVector& OutDeltaPosition, FRotator& OutDeltaRotation) const
 	{
 		OutDeltaPosition = this->DeltaPosition;
 		OutDeltaRotation = this->DeltaRotation;
-		OutRotationCenter = this->RotationCenter;
-		OutIsRotationCenterSet = this->IsRotationCenterSet;
+	}
+	
+	UFUNCTION(BlueprintPure)
+	void GetAnchor(AFGBuildable*& OutAnchor) const
+	{
+		OutAnchor = this->Anchor;
 	}
 	
 	UFUNCTION(BlueprintImplementableEvent)
@@ -48,17 +56,17 @@ public:
 	void Finish();
 
 	UFUNCTION()
-    void RemoveMissingItemsWidget();
-private:
-	UPROPERTY()
+	void RemoveMissingItemsWidget();
+	
+protected:
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
 	UAACopyBuildingsComponent* CopyBuildingsComponent;
 
 	FVector DeltaPosition;
 	FRotator DeltaRotation;
-	FVector RotationCenter;
-	bool IsRotationCenterSet;
-
-	bool PreviewExists;
+	
+	UPROPERTY()
+	AFGBuildable* Anchor;
 
 	UPROPERTY()
 	UWidget* MissingItemsWidget;

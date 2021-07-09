@@ -7,7 +7,7 @@
 #include "GameFramework/Actor.h"
 #include "AAAction.generated.h"
 
-UCLASS(Abstract, hidecategories = (Rendering, Replication, Input, Actor, Collision, "Actor Tick", LOD, Cooking))
+UCLASS(Abstract)
 class AREAACTIONS_API AAAAction : public AActor
 {
 	GENERATED_BODY()
@@ -22,10 +22,19 @@ public:
     void OnCancel();
     
 	UFUNCTION(BlueprintCallable)
-    void Cancel();
+	void Cancel();
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void PrimaryFire();
+	
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void SecondaryFire();
+	
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void MouseWheelUp();
+	
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void MouseWheelDown();
 
 	FORCEINLINE void SetActors(const TArray<AActor*> InActors) { this->Actors = InActors; }
 	FORCEINLINE void SetAAEquipment(class AAAEquipment* InEquipment) { this->AAEquipment = InEquipment; }

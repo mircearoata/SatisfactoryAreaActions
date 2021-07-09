@@ -9,17 +9,17 @@
 
 #include "AACopyBuildingsComponent.generated.h"
 
-USTRUCT()
+USTRUCT(Blueprintable)
 struct FRotatedBoundingBox
 {
 	GENERATED_BODY()
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite)
 	FVector Center;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite)
 	FVector Extents;
 	/** Only has yaw */
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite)
 	FRotator Rotation;
 
 	FVector GetCorner(uint32 CornerNum) const;
@@ -94,7 +94,7 @@ struct FCopyLocation
 	bool Relative;
 };
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS(Blueprintable, meta=(BlueprintSpawnableComponent))
 class AREAACTIONS_API UAACopyBuildingsComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -106,7 +106,10 @@ public:
 	bool SetBuildings(TArray<AFGBuildable*>& Buildings, TArray<AFGBuildable*>& OutBuildingsWithIssues, FText& Error);
 	bool ValidateObjects(TArray<AFGBuildable*>& OutBuildingsWithIssues);
 
+	UFUNCTION(BlueprintPure)
 	FORCEINLINE FVector GetBuildingsCenter() const { return BuildingsBounds.Center; }
+
+	UFUNCTION(BlueprintPure)
 	FORCEINLINE FRotatedBoundingBox GetBounds() const { return BuildingsBounds; }
 
 	int AddCopy(FVector Offset, FRotator Rotation, FVector RotationCenter, bool Relative = true);
@@ -116,6 +119,12 @@ public:
 	void RemoveCopy(int CopyId);
 
 	bool Finish(TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems);
+
+	UFUNCTION(BlueprintCallable)
+	AFGBuildableHologram* GetPreviewHologram(int CopyId, AFGBuildable* Buildable);
+	
+	UFUNCTION(BlueprintCallable)
+	void GetAllPreviewHolograms(TArray<AFGBuildableHologram*>& OutPreviewHolograms);
 
 private:
 	void FixReferencesForCopy(const FCopyMap& Copy);

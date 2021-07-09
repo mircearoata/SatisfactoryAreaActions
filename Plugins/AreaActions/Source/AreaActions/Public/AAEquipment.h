@@ -78,7 +78,14 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, meta = (AutoCreateRefTerm = "message"))
     UWidget* CreateActionMessageYesNo(const FText& Message, const FOnMessageYes& OnYesClicked, const FOnMessageNo& OnNoClicked);
-	
+
+	bool RaycastMouseWithRange(FHitResult & OutHitResult, bool bIgnoreCornerIndicators = false, bool bIgnoreWallIndicators = false, bool bIgnoreHeightIndicators = false, TArray<AActor*> OtherIgnoredActors = TArray<AActor*>()) const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure=false, meta=(DisplayName = "RaycastMouseWithRange", AutoCreateRefTerm = "OtherIgnoredActors"))
+	FORCEINLINE bool K2_RaycastMouseWithRange(FHitResult & OutHitResult, bool bIgnoreCornerIndicators, bool bIgnoreWallIndicators, bool bIgnoreHeightIndicators, TArray<AActor*> OtherIgnoredActors) const
+	{
+		return RaycastMouseWithRange(OutHitResult, bIgnoreCornerIndicators, bIgnoreWallIndicators, bIgnoreHeightIndicators, OtherIgnoredActors);
+	}
 protected:
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
 	void AddWidget(UFGInteractWidget* Widget);
@@ -103,8 +110,6 @@ public:
 	FOnActionDone OnActionDone;
 
 private:
-	bool RaycastMouseWithRange(FHitResult & OutHitResult, bool bIgnoreCornerIndicators = false, bool bIgnoreWallIndicators = false, bool bIgnoreHeightIndicators = false, TArray<AActor*> OtherIgnoredActors = TArray<AActor*>()) const;
-
 	void AddCorner(FVector2D Location);
 	void RemoveCorner(int CornerIdx);
 	void UpdateHeight();

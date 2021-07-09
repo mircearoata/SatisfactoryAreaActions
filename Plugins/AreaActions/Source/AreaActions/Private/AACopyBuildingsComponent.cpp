@@ -451,10 +451,13 @@ bool UAACopyBuildingsComponent::TryTakeItems(TArray<UFGInventoryComponent*> Inve
                 if(AFGBuildableFactory* FactoryBuildable = Cast<AFGBuildableFactory>(Buildable))
                 {
                     TArray<FInventoryStack> Stacks;
-                    FactoryBuildable->mInventoryPotential->GetInventoryStacks(Stacks);
-                    for(const FInventoryStack Stack : Stacks)
-                        if(Stack.HasItems())
-                            ItemsPerCopy.FindOrAdd(Stack.Item.ItemClass) += Stack.NumItems;
+                    if(FactoryBuildable->mInventoryPotential)
+                    {
+                        FactoryBuildable->mInventoryPotential->GetInventoryStacks(Stacks);
+                        for(const FInventoryStack Stack : Stacks)
+                            if(Stack.HasItems())
+                                ItemsPerCopy.FindOrAdd(Stack.Item.ItemClass) += Stack.NumItems;
+                    }
                 }
             }
         }
@@ -527,4 +530,22 @@ bool UAACopyBuildingsComponent::Finish(TArray<UFGInventoryComponent*> Inventorie
     }
     this->CopyLocations.Empty();
     return true;
+}
+
+AFGBuildableHologram* UAACopyBuildingsComponent::GetPreviewHologram(int CopyId, AFGBuildable* Buildable)
+{
+    if(!this->Preview.Contains(CopyId)) return nullptr;
+    if(!this->Preview[CopyId].Holograms.Contains(Buildable)) return nullptr;
+    return this->Preview[CopyId].Holograms[Buildable];
+}
+
+void UAACopyBuildingsComponent::GetAllPreviewHolograms(TArray<AFGBuildableHologram*>& OutPreviewHolograms)
+{
+    for(const auto& [CopyId, CopyPreview] : this->Preview)
+    {
+        for(const auto& [_, Hologram] : CopyPreview.Holograms)
+        {
+            OutPreviewHolograms.Add(Hologram);
+        }
+    }
 }
