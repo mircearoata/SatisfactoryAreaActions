@@ -1,8 +1,8 @@
 {
 	"FileVersion": 3,
 	"Version": 2,
-	"VersionName": "2.0.0-beta.1.u4",
-    "SemVersion": "2.0.0-beta.1.u4",
+	"VersionName": "2.0.0-beta.2",
+    "SemVersion": "2.0.0-beta.2",
 	"FriendlyName": "AreaActions",
 	"Description": "Area Actions",
 	"Category": "Other",

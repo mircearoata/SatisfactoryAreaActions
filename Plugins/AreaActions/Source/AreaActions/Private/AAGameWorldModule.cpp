@@ -32,13 +32,11 @@ void UAAGameWorldModule::InitSubsystemManager() {
 
 void UAAGameWorldModule::GetAreaActionsVersion(FVersion& Version)
 {
-#if AA_DEBUG
-	Version = FVersion(0, 0 ,0);
-	Version.Type = "DEV";
-#else
 	FModInfo ModInfo;
 	GEngine->GetEngineSubsystem<UModLoadingLibrary>()->GetLoadedModInfo(TEXT("AreaActions"), ModInfo);
 	Version = ModInfo.Version;
+#if AA_DEBUG
+	Version.Type += "+DEV";
 #endif
 }
 
