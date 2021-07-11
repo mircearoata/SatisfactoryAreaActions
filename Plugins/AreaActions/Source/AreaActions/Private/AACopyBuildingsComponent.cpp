@@ -138,7 +138,13 @@ void UAACopyBuildingsComponent::CalculateBounds()
     TMap<float, uint32> RotationCount;
     for(UObject* Object : this->Original)
         if(AActor* Actor = Cast<AActor>(Object))
+        {
+            TArray<USplineMeshComponent*> SplineMeshComponents;
+            Actor->GetComponents<USplineMeshComponent>(SplineMeshComponents);
+            if(SplineMeshComponents.Num() > 0)
+                continue;
             RotationCount.FindOrAdd(FGenericPlatformMath::Fmod(FGenericPlatformMath::Fmod(Actor->GetActorRotation().Yaw, 90) + 90, 90))++;
+        }
 
     RotationCount.ValueSort([](const uint32& A, const uint32& B) {
         return A > B;
@@ -293,7 +299,8 @@ void UAACopyBuildingsComponent::FixReferencesForCopy(const FCopyMap& Copy)
                     for(UFGInventoryComponent* InventoryComponent : BuildingInventories)
                     {
                         for(int i = 0; i < InventoryComponent->GetSizeLinear(); i++)
-                            InventoryComponent->RemoveAllFromIndex(i);
+                            if(InventoryComponent->IsSomethingOnIndex(i))
+                                InventoryComponent->RemoveAllFromIndex(i);
                     }
                 }
                 {
