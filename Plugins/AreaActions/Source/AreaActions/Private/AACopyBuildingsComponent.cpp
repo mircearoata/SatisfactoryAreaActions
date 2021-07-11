@@ -355,12 +355,15 @@ int UAACopyBuildingsComponent::AddCopy(const FVector Offset, const FRotator Rota
     {
         if(AFGBuildable* Buildable = Cast<AFGBuildable>(Object))
         {
-            AFGBuildableHologram* Hologram = static_cast<AFGBuildableHologram*>(AFGHologram::SpawnHologramFromRecipe(Buildable->GetBuiltWithRecipe(), GetOwner(), FVector::ZeroVector));
-            FTransform NewTransform = TransformAroundPoint(Buildable->GetActorTransform(), Relative ? BuildingsBounds.Rotation.RotateVector(Offset) : Offset, Rotation, RotationCenter);
-            Hologram->SetActorTransform(NewTransform);
-            Hologram->SetActorHiddenInGame(false);
-            Hologram->SetPlacementMaterial(true);
-            this->Preview[CurrentId].Holograms.Add(Buildable, Hologram);
+            if(Buildable->GetBuiltWithRecipe())
+            {
+                AFGBuildableHologram* Hologram = static_cast<AFGBuildableHologram*>(AFGHologram::SpawnHologramFromRecipe(Buildable->GetBuiltWithRecipe(), GetOwner(), FVector::ZeroVector));
+                FTransform NewTransform = TransformAroundPoint(Buildable->GetActorTransform(), Relative ? BuildingsBounds.Rotation.RotateVector(Offset) : Offset, Rotation, RotationCenter);
+                Hologram->SetActorTransform(NewTransform);
+                Hologram->SetActorHiddenInGame(false);
+                Hologram->SetPlacementMaterial(true);
+                this->Preview[CurrentId].Holograms.Add(Buildable, Hologram);
+            }
         }
     }
     return CurrentId++;
