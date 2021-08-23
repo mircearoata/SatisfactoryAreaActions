@@ -7,6 +7,109 @@
 
 AAAFill::AAAFill() {
     this->CopyBuildingsComponent = CreateDefaultSubobject<UAACopyBuildingsComponent>(TEXT("CopyBuildings"));
+
+	PrimaryActorTick.bCanEverTick = true;
+	SetActorTickEnabled(true);
+}
+
+void AAAFill::Tick(float DeltaSeconds)
+{
+	if(bIsPlacing)
+	{
+		TArray<AFGBuildableHologram*> Holograms;
+		CopyBuildingsComponent->GetAllPreviewHolograms(Holograms);
+		TArray<AActor*> HologramsActors(MoveTemp(Holograms));
+		FHitResult HitResult;
+		if(AAEquipment->RaycastMouseWithRange(HitResult, true, true, true, HologramsActors))
+		{
+			FVector Location = CopyBuildingsComponent->GetBounds().Rotation.UnrotateVector(HitResult.Location - CopyBuildingsComponent->GetBounds().Center);
+			FVector CopyOffset = CopyBuildingsComponent->GetBounds().Extents * 2 + Border;
+			FVector Corner = CopyBuildingsComponent->GetBounds().Extents;
+			if(Location.X < 0)
+				Corner.X = -Corner.X;
+			if(Location.Y < 0)
+				Corner.Y = -Corner.Y;
+			if(Location.Z < 0)
+				Corner.Z = -Corner.Z;
+			FIntVector AxisCount = FIntVector((Location + Corner) / CopyOffset);
+			if(FillDirection == EFillDirection::XY || FillDirection == EFillDirection::XZ || FillDirection == EFillDirection::XYZ)
+				Count.X = FFillAxis(FGenericPlatformMath::Abs(AxisCount.X) + 1, AxisCount.X < 0);
+			else
+				Count.X = FFillAxis(1, false);
+			if(FillDirection == EFillDirection::XY || FillDirection == EFillDirection::YZ || FillDirection == EFillDirection::XYZ)
+				Count.Y = FFillAxis(FGenericPlatformMath::Abs(AxisCount.Y) + 1, AxisCount.Y < 0);
+			else
+				Count.Y = FFillAxis(1, false);
+			if(FillDirection == EFillDirection::XZ || FillDirection == EFillDirection::YZ || FillDirection == EFillDirection::XYZ)
+				Count.Z = FFillAxis(FGenericPlatformMath::Abs(AxisCount.Z) + 1, AxisCount.Z < 0);
+			else
+				Count.Z = FFillAxis(1, false);
+		}
+		Preview();
+	}
+}
+
+void AAAFill::PrimaryFire()
+{
+	if(bIsPlacing)
+	{
+		bIsPlacing = false;
+		ScrollUpInputActionBinding->bConsumeInput = false;
+		ScrollDownInputActionBinding->bConsumeInput = false;
+	}
+	AAEquipment->OpenMainWidget();
+}
+
+void AAAFill::ScrollUp()
+{
+	switch (FillDirection)
+	{
+	case EFillDirection::XY:
+		FillDirection = EFillDirection::XZ;
+		break;
+	case EFillDirection::XZ:
+		FillDirection = EFillDirection::YZ;
+		break;
+	case EFillDirection::YZ:
+		FillDirection = EFillDirection::XYZ;
+		break;
+	case EFillDirection::XYZ:
+		FillDirection = EFillDirection::XY; 
+		break;
+	}
+}
+
+void AAAFill::ScrollDown()
+{
+	switch (FillDirection)
+	{
+	case EFillDirection::XZ:
+		FillDirection = EFillDirection::XY;
+		break;
+	case EFillDirection::YZ:
+		FillDirection = EFillDirection::XZ;
+		break;
+	case EFillDirection::XYZ:
+		FillDirection = EFillDirection::YZ;
+		break;
+	case EFillDirection::XY:
+		FillDirection = EFillDirection::XYZ; 
+		break;
+	}
+}
+
+void AAAFill::EquipmentEquipped(AAAEquipment* Equipment)
+{
+    Super::EquipmentEquipped(Equipment);
+    if(!InputComponent->HasBindings())
+    {
+        InputComponent->BindAction("PrimaryFire", EInputEvent::IE_Pressed, this, &AAAFill::PrimaryFire);
+        InputComponent->BindAction("SecondaryFire", EInputEvent::IE_Pressed, this, &AAAFill::PrimaryFire);
+        ScrollUpInputActionBinding = &InputComponent->BindAction("BuildGunScrollUp_PhotoModeFOVUp", EInputEvent::IE_Pressed, this, &AAAFill::ScrollUp);
+        ScrollDownInputActionBinding = &InputComponent->BindAction("BuildGunScrollDown_PhotoModeFOVDown", EInputEvent::IE_Pressed, this, &AAAFill::ScrollDown);
+        ScrollUpInputActionBinding->bConsumeInput = false;
+        ScrollDownInputActionBinding->bConsumeInput = false;
+    }
 }
 
 void AAAFill::Run_Implementation() {
@@ -123,5 +226,12 @@ void AAAFill::RemoveMissingItemsWidget()
     MissingItemsWidget = nullptr;
 }
 
+void AAAFill::EnterPlacing()
+{
+	ScrollUpInputActionBinding->bConsumeInput = true;
+	ScrollDownInputActionBinding->bConsumeInput = true;
+	bIsPlacing = true;
+	AAEquipment->CloseMainWidget();
+}
 
 FFillAxis FFillAxis::None = FFillAxis();

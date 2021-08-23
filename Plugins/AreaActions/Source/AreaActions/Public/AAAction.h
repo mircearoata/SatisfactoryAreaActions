@@ -4,6 +4,7 @@
 
 #include "AAActionCategory.h"
 #include "CoreMinimal.h"
+
 #include "GameFramework/Actor.h"
 #include "AAAction.generated.h"
 
@@ -23,21 +24,14 @@ public:
     
 	UFUNCTION(BlueprintCallable)
 	void Cancel();
-	
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void PrimaryFire();
-	
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void SecondaryFire();
-	
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void MouseWheelUp();
-	
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void MouseWheelDown();
+
+	virtual void EquipmentEquipped(class AAAEquipment* Equipment);
+
+	virtual void EquipmentUnEquipped();
 
 	FORCEINLINE void SetActors(const TArray<AActor*> InActors) { this->Actors = InActors; }
 	FORCEINLINE void SetAAEquipment(class AAAEquipment* InEquipment) { this->AAEquipment = InEquipment; }
+	FORCEINLINE void SetSubsystem(class UAALocalPlayerSubsystem* InSubsystem) { this->LocalPlayerSubsystem = InSubsystem; }
 
 	UFUNCTION(BlueprintPure, Category = "Action")
 	static FText GetActionName(TSubclassOf<AAAAction> InClass);
@@ -54,6 +48,9 @@ public:
 protected:
 	UPROPERTY(BlueprintReadOnly)
 	class AAAEquipment* AAEquipment;
+
+	UPROPERTY(BlueprintReadOnly)
+	class UAALocalPlayerSubsystem* LocalPlayerSubsystem;
 
 	UPROPERTY(BlueprintReadOnly)
 	TArray<AActor*> Actors;

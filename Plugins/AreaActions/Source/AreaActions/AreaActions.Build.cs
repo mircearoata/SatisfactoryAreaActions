@@ -34,6 +34,6 @@ public class AreaActions : ModuleRules
         var gitDirty = gitDiffQuiet.ExitCode == 1;
         Console.Out.WriteLine("Area Actions plugin is {0}", gitDirty ? "dirty" : "clean");
 
-        PublicDefinitions.Add(gitDirty ? "AA_DEBUG=1" : "AA_DEBUG=0");
+        PublicDefinitions.Add(gitDirty ? "AA_DEBUG=0" : "AA_DEBUG=0");
     }
 }

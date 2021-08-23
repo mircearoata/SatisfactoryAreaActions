@@ -2,11 +2,9 @@
 
 #include "AACopyBuildingsComponent.h"
 
-
 #include "AAObjectCollectorArchive.h"
 #include "AAObjectReferenceArchive.h"
 #include "AAObjectValidatorArchive.h"
-#include "Buildables/FGBuildableManufacturer.h"
 #include "Buildables/FGBuildableConveyorBase.h"
 #include "FGColoredInstanceMeshProxy.h"
 #include "FGFactorySettings.h"
@@ -17,6 +15,7 @@
 #include "TopologicalSort/TopologicalSort.h"
 #include "FGGameState.h"
 #include "FGProductionIndicatorInstanceComponent.h"
+#include "Components/SplineMeshComponent.h"
 
 void PreSaveGame(UObject* Object)
 {
@@ -438,11 +437,7 @@ bool UAACopyBuildingsComponent::TryTakeItems(TArray<UFGInventoryComponent*> Inve
 {
     if(this->Preview.Num() == 0)
         return true;
-    
-    TArray<int> CopyIds;
-    this->Preview.GetKeys(CopyIds);
-    const int FirstCopy = CopyIds[0];
-    
+        
     const bool UseBuildCosts = !static_cast<AFGGameState*>(GetWorld()->GetGameState())->GetCheatNoCost();
     TMap<TSubclassOf<UFGItemDescriptor>, int32> ItemsPerCopy;
     for(UObject* Object : this->Original)
@@ -460,9 +455,9 @@ bool UAACopyBuildingsComponent::TryTakeItems(TArray<UFGInventoryComponent*> Inve
             {
                 if(AFGBuildableFactory* FactoryBuildable = Cast<AFGBuildableFactory>(Buildable))
                 {
-                    TArray<FInventoryStack> Stacks;
                     if(FactoryBuildable->mInventoryPotential)
                     {
+                        TArray<FInventoryStack> Stacks;
                         FactoryBuildable->mInventoryPotential->GetInventoryStacks(Stacks);
                         for(const FInventoryStack Stack : Stacks)
                             if(Stack.HasItems())

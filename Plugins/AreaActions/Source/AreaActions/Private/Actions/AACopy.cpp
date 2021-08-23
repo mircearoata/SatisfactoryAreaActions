@@ -2,6 +2,8 @@
 
 #include "Actions/AACopy.h"
 
+#include "AreaActionsModule.h"
+#include "AABlueprintFunctionLibrary.h"
 #include "AAEquipment.h"
 #include "FGOutlineComponent.h"
 #include "FGPlayerController.h"
@@ -11,6 +13,110 @@ AAACopy::AAACopy() {
 	this->CopyBuildingsComponent = CreateDefaultSubobject<UAACopyBuildingsComponent>(TEXT("CopyBuildings"));
 	this->DeltaPosition = FVector::ZeroVector;
 	this->DeltaRotation = FRotator::ZeroRotator;
+
+	PrimaryActorTick.bCanEverTick = true;
+	SetActorTickEnabled(true);
+}
+
+void AAACopy::Tick(float DeltaSeconds)
+{
+	if(bIsPlacing)
+	{
+		TArray<AFGBuildableHologram*> Holograms;
+		CopyBuildingsComponent->GetAllPreviewHolograms(Holograms);
+		TArray<AActor*> HologramsActors(MoveTemp(Holograms));
+		FHitResult HitResult;
+		if(AAEquipment->RaycastMouseWithRange(HitResult, true, true, true, HologramsActors))
+		{
+			if(Anchor)
+			{
+				if(AFGBuildableHologram* AnchorHologram = CopyBuildingsComponent->GetPreviewHologram(0, Anchor))
+				{
+					FTransform Snapped = UAABlueprintFunctionLibrary::GetHologramSnap(AnchorHologram, HitResult);
+					SetDeltaFromAnchorTransform(Snapped);
+				}
+			}
+			else
+			{
+				DeltaPosition = CopyBuildingsComponent->GetBounds().Rotation.UnrotateVector(HitResult.Location - CopyBuildingsComponent->GetBounds().Center);
+			}
+		}
+		Preview();
+	}
+}
+
+void AAACopy::PrimaryFire()
+{
+	if(bIsPickingAnchor)
+	{
+		bIsPickingAnchor = false;
+		FHitResult HitResult;
+		if(AAEquipment->RaycastMouseWithRange(HitResult, true, true, true) && Actors.Contains(HitResult.Actor))
+		{
+			Anchor = static_cast<AFGBuildable*>(HitResult.Actor.Get());
+		}
+		else
+		{
+			Anchor = nullptr;
+		}
+	}
+	else if(bIsPlacing)
+	{
+		bIsPlacing = false;
+		ScrollUpInputActionBinding->bConsumeInput = false;
+		ScrollDownInputActionBinding->bConsumeInput = false;
+	}
+	AAEquipment->OpenMainWidget();
+}
+
+void AAACopy::ScrollUp()
+{
+	if(Anchor)
+	{
+		if(AFGBuildableHologram* Hologram = CopyBuildingsComponent->GetPreviewHologram(0, Anchor))
+		{
+			FTransform Scrolled = UAABlueprintFunctionLibrary::GetHologramScroll(Hologram, 1);
+			SetDeltaFromAnchorTransform(Scrolled);
+			return;
+		}
+	}
+	DeltaRotation = DeltaRotation.Add(0, 10, 0);
+}
+
+void AAACopy::ScrollDown()
+{
+	if(Anchor)
+	{
+		if(AFGBuildableHologram* Hologram = CopyBuildingsComponent->GetPreviewHologram(0, Anchor))
+		{
+			FTransform Scrolled = UAABlueprintFunctionLibrary::GetHologramScroll(Hologram, -1);
+			SetDeltaFromAnchorTransform(Scrolled);
+			return;
+		}
+	}
+	DeltaRotation = DeltaRotation.Add(0, -10, 0);
+}
+
+void AAACopy::SetDeltaFromAnchorTransform(FTransform HologramTransform)
+{
+	DeltaPosition = CopyBuildingsComponent->GetBounds().Rotation.UnrotateVector(HologramTransform.GetTranslation() - Anchor->GetActorLocation());
+	DeltaRotation = HologramTransform.GetRotation().Rotator() - Anchor->GetActorRotation();
+
+	DeltaRotation = FRotator(FGenericPlatformMath::RoundToInt(DeltaRotation.Pitch), FGenericPlatformMath::RoundToInt(DeltaRotation.Yaw), FGenericPlatformMath::RoundToInt(DeltaRotation.Roll));
+}
+
+void AAACopy::EquipmentEquipped(AAAEquipment* Equipment)
+{
+	Super::EquipmentEquipped(Equipment);
+	if(!InputComponent->HasBindings())
+	{
+		InputComponent->BindAction("PrimaryFire", EInputEvent::IE_Pressed, this, &AAACopy::PrimaryFire);
+		InputComponent->BindAction("SecondaryFire", EInputEvent::IE_Pressed, this, &AAACopy::PrimaryFire);
+		ScrollUpInputActionBinding = &InputComponent->BindAction("BuildGunScrollUp_PhotoModeFOVUp", EInputEvent::IE_Pressed, this, &AAACopy::ScrollUp);
+		ScrollDownInputActionBinding = &InputComponent->BindAction("BuildGunScrollDown_PhotoModeFOVDown", EInputEvent::IE_Pressed, this, &AAACopy::ScrollDown);
+		ScrollUpInputActionBinding->bConsumeInput = false;
+		ScrollDownInputActionBinding->bConsumeInput = false;
+	}
 }
 
 void AAACopy::Run_Implementation() {
@@ -94,4 +200,18 @@ void AAACopy::RemoveMissingItemsWidget()
 {
 	this->AAEquipment->RemoveActionWidget(MissingItemsWidget);
 	MissingItemsWidget = nullptr;
+}
+
+void AAACopy::EnterPickAnchor()
+{
+	bIsPickingAnchor = true;
+	AAEquipment->CloseMainWidget();
+}
+
+void AAACopy::EnterPlacing()
+{
+	ScrollUpInputActionBinding->bConsumeInput = true;
+	ScrollDownInputActionBinding->bConsumeInput = true;
+	bIsPlacing = true;
+	AAEquipment->CloseMainWidget();
 }

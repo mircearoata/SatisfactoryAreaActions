@@ -7,6 +7,8 @@
 #include "AAHeightIndicator.h"
 #include "AAAction.h"
 #include "CoreMinimal.h"
+
+#include "AALocalPlayerSubsystem.h"
 #include "Equipment/FGEquipment.h"
 #include "UI/FGInteractWidget.h"
 #include "AAEquipment.generated.h"
@@ -14,7 +16,6 @@
 DECLARE_DYNAMIC_DELEGATE(FOnMessageOk);
 DECLARE_DYNAMIC_DELEGATE(FOnMessageYes);
 DECLARE_DYNAMIC_DELEGATE(FOnMessageNo);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnActionDone);
 
 UENUM(BlueprintType)
 enum EAASelectionMode {
@@ -34,10 +35,6 @@ class AREAACTIONS_API AAAEquipment : public AFGEquipment
 	GENERATED_BODY()
 
 public:
-	AAAEquipment();
-
-	virtual void BeginPlay() override;
-
 	virtual void Equip(class AFGCharacterPlayer* Character) override;
 	virtual void UnEquip() override;
 
@@ -51,44 +48,25 @@ public:
 	void SetSelectionMode(const EAASelectionMode Mode) { this->SelectionMode = Mode; }
 	
 	UFUNCTION(BlueprintCallable)
-    EAASelectionMode GetSelectionMode() const { return this->SelectionMode; }
+	EAASelectionMode GetSelectionMode() const { return this->SelectionMode; }
 
 	UFUNCTION(BlueprintCallable)
 	void SelectMap();
 
 	UFUNCTION(BlueprintCallable)
 	void ClearSelection();
-
-	UFUNCTION(BlueprintCallable)
-	void RunAction(TSubclassOf<AAAAction> ActionClass);
-	
-	UFUNCTION(BlueprintPure)
-	class AFGPlayerController* GetOwningController() const;
 	
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
-	void AddActionWidget(UWidget* Widget);
+	void OpenMainWidget();
 	
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
-    void RemoveActionWidget(UWidget* Widget);
-
-	void ActionDone();
+	void CloseMainWidget();
 	
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, meta = (AutoCreateRefTerm = "message"))
-    UWidget* CreateActionMessageOk(const FText& Message, const FOnMessageOk& OnOkClicked);
+	UWidget* CreateActionMessageOk(const FText& Message, const FOnMessageOk& OnOkClicked);
 
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, meta = (AutoCreateRefTerm = "message"))
-    UWidget* CreateActionMessageYesNo(const FText& Message, const FOnMessageYes& OnYesClicked, const FOnMessageNo& OnNoClicked);
-
-	bool RaycastMouseWithRange(FHitResult & OutHitResult, bool bIgnoreCornerIndicators = false, bool bIgnoreWallIndicators = false, bool bIgnoreHeightIndicators = false, TArray<AActor*> OtherIgnoredActors = TArray<AActor*>()) const;
-
-	UFUNCTION(BlueprintCallable, BlueprintPure=false, meta=(DisplayName = "RaycastMouseWithRange", AutoCreateRefTerm = "OtherIgnoredActors"))
-	FORCEINLINE bool K2_RaycastMouseWithRange(FHitResult & OutHitResult, bool bIgnoreCornerIndicators, bool bIgnoreWallIndicators, bool bIgnoreHeightIndicators, TArray<AActor*> OtherIgnoredActors) const
-	{
-		return RaycastMouseWithRange(OutHitResult, bIgnoreCornerIndicators, bIgnoreWallIndicators, bIgnoreHeightIndicators, OtherIgnoredActors);
-	}
-protected:
-	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
-	void AddWidget(UFGInteractWidget* Widget);
+	UWidget* CreateActionMessageYesNo(const FText& Message, const FOnMessageYes& OnYesClicked, const FOnMessageNo& OnNoClicked);
 	
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, meta = (AutoCreateRefTerm = "title,message"))
 	void ShowMessageOk(const FText& Title, const FText& Message);
@@ -98,70 +76,43 @@ protected:
 
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, meta = (AutoCreateRefTerm = "title,message"))
 	void ShowMessageYesNoDelegate(const FText& Title, const FText& Message, const FOnMessageYes& OnYesClicked, const FOnMessageNo& OnNoClicked);
-
+	
 	UFUNCTION(BlueprintCallable)
-	void UpdateExtraActors() const;
+	void AddWidget(UFGInteractWidget* Widget);
+	
+	UFUNCTION(BlueprintCallable)
+	void AddActionWidget(UWidget* Widget);
+	
+	UFUNCTION(BlueprintCallable)
+	void RemoveActionWidget(UWidget* Widget);
+	
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
+	void UpdateDisplayedActionWidget();
+	
+	UFUNCTION(BlueprintPure)
+	class AFGPlayerController* GetOwningController() const;
 
-	UFUNCTION(BlueprintImplementableEvent)
-	void DelayedUpdateExtraActors();
+	bool RaycastMouseWithRange(FHitResult & OutHitResult, bool bIgnoreCornerIndicators = false, bool bIgnoreWallIndicators = false, bool bIgnoreHeightIndicators = false, TArray<AActor*> OtherIgnoredActors = TArray<AActor*>()) const;
 
-public:
-	UPROPERTY(BlueprintAssignable)
-	FOnActionDone OnActionDone;
+	UFUNCTION(BlueprintCallable, BlueprintPure=false, meta=(DisplayName = "RaycastMouseWithRange", AutoCreateRefTerm = "OtherIgnoredActors"))
+	FORCEINLINE bool K2_RaycastMouseWithRange(FHitResult & OutHitResult, bool bIgnoreCornerIndicators, bool bIgnoreWallIndicators, bool bIgnoreHeightIndicators, TArray<AActor*> OtherIgnoredActors) const
+	{
+		return RaycastMouseWithRange(OutHitResult, bIgnoreCornerIndicators, bIgnoreWallIndicators, bIgnoreHeightIndicators, OtherIgnoredActors);
+	}
+	
+	UFUNCTION(BlueprintCallable)
+	void RunAction(TSubclassOf<AAAAction> ActionClass);
 
 private:
-	void AddCorner(FVector2D Location);
-	void RemoveCorner(int CornerIdx);
-	void UpdateHeight();
+	UFUNCTION()
+	void OnActionDone();
 
-	AAACornerIndicator* CreateCornerIndicator(FVector2D Location) const;
-	AAAWallIndicator* CreateWallIndicator(FVector2D From, FVector2D To) const;
-
-	void GetAllActorsInArea(TArray<AActor*>& OutActors);
-
-protected:
+public:
 	UPROPERTY(BlueprintReadOnly)
-	AAAAction* CurrentAction;
+	UAALocalPlayerSubsystem* LocalPlayerSubsystem;
 
-private:
-	UPROPERTY()
-	TArray<AActor*> ExtraActors;
-
-	TArray<FVector2D> AreaCorners;
-	float AreaMinZ;
-	float AreaMaxZ;
+private:	
 	EAASelectionMode SelectionMode;
-	
-	UPROPERTY()
-	TArray<AAACornerIndicator*> CornerIndicators;
-	
-	UPROPERTY()
-	TArray<AAAWallIndicator*> WallIndicators;
-	
-	UPROPERTY()
-	AAAHeightIndicator* TopIndicator;
-
-	UPROPERTY()
-	AAAHeightIndicator* BottomIndicator;
-
-public:
-	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<AAACornerIndicator> CornerIndicatorClass;
-
-	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<AAAWallIndicator> WallIndicatorClass;
-
-	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<AAAHeightIndicator> HeightIndicatorClass;
-	
-	UPROPERTY(EditDefaultsOnly)
-	float MaxRaycastDistance = 50000;
-	
-	UPROPERTY(EditDefaultsOnly)
-	float MinZ = -350000.0;
-	
-	UPROPERTY(EditDefaultsOnly)
-	float MaxZ = 450000.0;
 	
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UFGInteractWidget> MainWidgetClass;
@@ -170,8 +121,5 @@ public:
 	FText WidgetTitle = FText::FromString(TEXT("Area Actions"));
 	
 	UPROPERTY(EditDefaultsOnly)
-	FText AreaNotSetMessage = FText::FromString(TEXT("Needs at least 3 corners, or at least one selected building!"));
-	
-	UPROPERTY(EditDefaultsOnly)
-	FText ConflictingActionRunningMessage = FText::FromString(TEXT("Another action is already running!"));
+	float MaxRaycastDistance = 50000;
 };

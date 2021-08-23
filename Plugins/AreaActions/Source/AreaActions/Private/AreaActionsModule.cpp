@@ -1,9 +1,9 @@
 #include "AreaActionsModule.h"
 
-#include "FGGameMode.h"
 #include "FGPlayerController.h"
 #include "UObject/CoreRedirects.h"
-#include "FGAdminInterface.h"
+
+DEFINE_LOG_CATEGORY(LogAreaActions);
 
 void FAreaActionsModule::StartupModule() {
 #if !WITH_EDITOR && AA_DEBUG

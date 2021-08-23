@@ -2,19 +2,31 @@
 
 #include "AAAction.h"
 #include "AAEquipment.h"
+#include "FGPlayerController.h"
 
 void AAAAction::Run_Implementation() {
 }
 
 void AAAAction::Done()
 {
-	this->AAEquipment->ActionDone();
+	this->LocalPlayerSubsystem->ActionDone();
 }
 
 void AAAAction::Cancel()
 {
 	this->OnCancel();
 	this->Done();
+}
+
+void AAAAction::EquipmentEquipped(AAAEquipment* Equipment)
+{
+	this->SetAAEquipment(Equipment);
+	EnableInput(AAEquipment->GetOwningController());
+}
+
+void AAAAction::EquipmentUnEquipped()
+{
+	DisableInput(AAEquipment->GetOwningController());
 }
 
 FText AAAAction::GetActionName(const TSubclassOf<AAAAction> InClass)
@@ -41,22 +53,6 @@ FSlateBrush AAAAction::GetActionIcon(const TSubclassOf<AAAAction> InClass)
 	return InClass.GetDefaultObject()->Icon;
 }
 
-void AAAAction::PrimaryFire_Implementation()
-{
-}
-
-void AAAAction::MouseWheelUp_Implementation()
-{
-}
-
-void AAAAction::SecondaryFire_Implementation()
-{
-}
-
 void AAAAction::OnCancel_Implementation()
-{
-}
-
-void AAAAction::MouseWheelDown_Implementation()
 {
 }
