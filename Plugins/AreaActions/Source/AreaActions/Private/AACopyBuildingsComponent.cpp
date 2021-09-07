@@ -49,23 +49,6 @@ void PostLoadGame(UObject* Object)
             FEngineVersion::Current().GetChangelist());
 }
 
-FVector FRotatedBoundingBox::GetCorner(const uint32 CornerNum) const
-{
-    switch(CornerNum)
-    {
-    case 0:
-        return Center + Rotation.RotateVector(FVector(Extents.X, Extents.Y, 0));
-    case 1:
-        return Center + Rotation.RotateVector(FVector(Extents.X, -Extents.Y, 0));
-    case 2:
-        return Center + Rotation.RotateVector(FVector(-Extents.X, -Extents.Y, 0));
-    case 3:
-        return Center + Rotation.RotateVector(FVector(-Extents.X, Extents.Y, 0));
-    default:
-        return Center;
-    }
-}
-
 UAACopyBuildingsComponent::UAACopyBuildingsComponent()
 {
     ValidCheckSkipProperties.Add(AActor::StaticClass()->FindPropertyByName(TEXT("Owner")));
@@ -211,7 +194,7 @@ void UAACopyBuildingsComponent::CalculateBounds()
 
     const FVector Bounds = Rotation.UnrotateVector(Max - Center);
             
-    this->BuildingsBounds = FRotatedBoundingBox{Center, FVector(FGenericPlatformMath::RoundToFloat(Bounds.X), FGenericPlatformMath::RoundToFloat(Bounds.Y), FGenericPlatformMath::RoundToFloat(Bounds.Z)), Rotation};
+    this->BuildingsBounds = FAARotatedBoundingBox{Center, FVector(FGenericPlatformMath::RoundToFloat(Bounds.X), FGenericPlatformMath::RoundToFloat(Bounds.Y), FGenericPlatformMath::RoundToFloat(Bounds.Z)), Rotation};
 }
 
 void UAACopyBuildingsComponent::SerializeOriginal()
@@ -246,11 +229,11 @@ bool UAACopyBuildingsComponent::ValidateObjects(TArray<AFGBuildable*>& OutBuildi
     return OutBuildingsWithIssues.Num() == 0;
 }
 
-FTransform TransformAroundPoint(const FTransform Original, const FVector Offset, const FRotator Rotation, const FVector RotationCenter)
+FTransform UAACopyBuildingsComponent::TransformAroundPoint(const FTransform OriginalTransform, const FVector Offset, const FRotator Rotation, const FVector RotationCenter)
 {
-    const FVector NewLocation = Rotation.RotateVector(Original.GetLocation() - RotationCenter) + RotationCenter + Offset;
-    const FQuat NewRotation = Rotation.Quaternion() * Original.GetRotation();
-    return FTransform(NewRotation, NewLocation, Original.GetScale3D());
+    const FVector NewLocation = Rotation.RotateVector(OriginalTransform.GetLocation() - RotationCenter) + RotationCenter + Offset;
+    const FQuat NewRotation = Rotation.Quaternion() * OriginalTransform.GetRotation();
+    return FTransform(NewRotation, NewLocation, OriginalTransform.GetScale3D());
 }
 
 void UAACopyBuildingsComponent::FixReferencesForCopy(const FCopyMap& Copy)
@@ -397,7 +380,7 @@ void UAACopyBuildingsComponent::RemoveCopy(const int CopyId)
     this->CopyLocations.Remove(CopyId);
 }
 
-bool CheckItems(TMap<TSubclassOf<UFGItemDescriptor>, int32> RemainingItems, TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems, const bool TakeItems = false)
+bool UAACopyBuildingsComponent::CheckItems(TMap<TSubclassOf<UFGItemDescriptor>, int32> RemainingItems, TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems, const bool TakeItems) const
 {
     if(TakeItems)
     {

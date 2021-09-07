@@ -3,27 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AARotatedBoundingBox.h"
 #include "Components/ActorComponent.h"
 #include "Buildables/FGBuildable.h"
 #include "Hologram/FGBuildableHologram.h"
 
 #include "AACopyBuildingsComponent.generated.h"
-
-USTRUCT(Blueprintable)
-struct FRotatedBoundingBox
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadWrite)
-	FVector Center;
-	UPROPERTY(BlueprintReadWrite)
-	FVector Extents;
-	/** Only has yaw */
-	UPROPERTY(BlueprintReadWrite)
-	FRotator Rotation;
-
-	FVector GetCorner(uint32 CornerNum) const;
-};
 
 USTRUCT()
 struct FCopyMap
@@ -110,7 +95,7 @@ public:
 	FORCEINLINE FVector GetBuildingsCenter() const { return BuildingsBounds.Center; }
 
 	UFUNCTION(BlueprintPure)
-	FORCEINLINE FRotatedBoundingBox GetBounds() const { return BuildingsBounds; }
+	FORCEINLINE FAARotatedBoundingBox GetBounds() const { return BuildingsBounds; }
 
 	int AddCopy(FVector Offset, FRotator Rotation, FVector RotationCenter, bool Relative = true);
 	FORCEINLINE int AddCopy(const FVector Offset, const FRotator Rotation, const bool Relative = true) { return this->AddCopy(Offset, Rotation, GetBuildingsCenter(), Relative); }
@@ -127,12 +112,15 @@ public:
 	void GetAllPreviewHolograms(TArray<AFGBuildableHologram*>& OutPreviewHolograms);
 
 private:
+	FTransform TransformAroundPoint(FTransform OriginalTransform, FVector Offset, FRotator Rotation, FVector RotationCenter);
+	
 	void FixReferencesForCopy(const FCopyMap& Copy);
 
 	void CalculateBounds();
 	void SerializeOriginal();
 	
 	bool TryTakeItems(TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems);
+	bool CheckItems(TMap<TSubclassOf<UFGItemDescriptor>, int32> RemainingItems, TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems, const bool TakeItems = false) const;
 	
 private:
 	int32 CurrentId;
@@ -149,5 +137,5 @@ private:
 	
 	TArray<uint8> Serialized;
 
-	FRotatedBoundingBox BuildingsBounds;
+	FAARotatedBoundingBox BuildingsBounds;
 };

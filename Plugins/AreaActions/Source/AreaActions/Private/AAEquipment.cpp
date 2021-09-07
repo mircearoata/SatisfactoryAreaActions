@@ -166,12 +166,19 @@ bool AAAEquipment::RaycastMouseWithRange(FHitResult& OutHitResult, const bool bI
 	const FVector CameraLocation = CameraManager->GetCameraLocation();
 	const FVector CameraDirection = CameraManager->GetActorForwardVector();
 
+	const FVector LineTraceStart = CameraLocation + CameraDirection * (GetInstigatorCharacter()->GetCapsuleComponent()->GetScaledCapsuleRadius() + 5);
 	const FVector LineTraceEnd = CameraLocation + CameraDirection * MaxRaycastDistance;
 
 	FCollisionQueryParams Params = FCollisionQueryParams::DefaultQueryParam;
 	Params.AddIgnoredActors(IgnoredActors);
 	Params.AddIgnoredActors(OtherIgnoredActors);
-	return GetWorld()->LineTraceSingleByChannel(OutHitResult, CameraLocation, LineTraceEnd, ECC_Visibility, Params);
+	FCollisionObjectQueryParams ObjectParams;
+	ObjectParams.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldStatic);
+	ObjectParams.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldDynamic);
+	ObjectParams.AddObjectTypesToQuery(ECollisionChannel::ECC_GameTraceChannel2); // Hologram
+	ObjectParams.AddObjectTypesToQuery(ECollisionChannel::ECC_GameTraceChannel4); // Clearance
+	ObjectParams.AddObjectTypesToQuery(ECollisionChannel::ECC_GameTraceChannel8); // HologramClearance
+	return GetWorld()->LineTraceSingleByObjectType(OutHitResult, LineTraceStart, LineTraceEnd, ObjectParams, Params);
 }
 
 void AAAEquipment::RunAction(TSubclassOf<AAAAction> ActionClass)
