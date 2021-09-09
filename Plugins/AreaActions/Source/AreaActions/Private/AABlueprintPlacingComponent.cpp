@@ -208,6 +208,8 @@ void UAABlueprintPlacingComponent::MoveCopy(const int CopyId, const FVector Offs
 
 void UAABlueprintPlacingComponent::RemoveCopy(const int CopyId)
 {
+    if(!Preview.Contains(CopyId))
+        return;
     for(const auto& [_, Hologram] : this->Preview[CopyId].Holograms)
         Hologram->Destroy();
     this->Preview.Remove(CopyId);

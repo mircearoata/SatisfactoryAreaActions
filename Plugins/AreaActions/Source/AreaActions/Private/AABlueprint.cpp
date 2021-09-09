@@ -2,6 +2,7 @@
 
 #include "AABlueprint.h"
 
+#include "AABuildingsDataHelper.h"
 #include "UObject/Object.h"
 #include "AAObjectCollectorArchive.h"
 #include "AAObjectReferenceArchive.h"
@@ -60,8 +61,8 @@ FArchive& operator<< (FArchive& Ar, FAABlueprintHeader& Header)
 		HeaderVersion = HeaderFormatVersion::LatestVersion;
 		Ar << HeaderVersion;
 	}
-	if(HeaderVersion >= HeaderFormatVersion::InitialVersion)
-		Ar << Header.GameVersion;
+	Ar << Header.GameVersion;
+	Ar << Header.BlueprintName;
 	Ar << Header.BoundingBox;
 	Ar << Header.BuildCosts;
 	Ar << Header.OtherItems;
@@ -83,7 +84,7 @@ bool ValidateObjects(TArray<UObject*> Objects, TArray<AActor*>& OutActorsWithIss
 	return OutActorsWithIssues.Num() == 0;
 }
 
-bool UAABlueprint::SetRootSet(TArray<AActor*>& Actors, TArray<AActor*> OutActorsWithIssues)
+UAABlueprint* UAABlueprint::FromRootSet(UObject* WorldContext, TArray<AActor*>& Actors, TArray<AActor*>& OutActorsWithIssues)
 {
 	TArray<UObject*> Objects;
 	for(AActor* Building : Actors)
@@ -108,139 +109,32 @@ bool UAABlueprint::SetRootSet(TArray<AActor*>& Actors, TArray<AActor*> OutActors
 		}
 	}
 
+	TArray<UObject*> ObjectsToSerialize;
 	ObjectsToSerialize.Reserve(AllObjects.Num());
     
 	FTopologicalSort::TopologicalSort(DependencyGraph, ObjectsToSerialize);
-	return ValidateObjects(ObjectsToSerialize, OutActorsWithIssues);
-}
+	bool Valid = ValidateObjects(ObjectsToSerialize, OutActorsWithIssues);
+	if(!Valid)
+		return nullptr;
 
-FAARotatedBoundingBox UAABlueprint::CalculateBoundingBox()
-{
-    TMap<float, uint32> RotationCount;
-    for(UObject* Object : ObjectsToSerialize)
-        if(AActor* Actor = Cast<AActor>(Object))
-        {
-            TArray<USplineMeshComponent*> SplineMeshComponents;
-            Actor->GetComponents<USplineMeshComponent>(SplineMeshComponents);
-            if(SplineMeshComponents.Num() > 0)
-                continue;
-            RotationCount.FindOrAdd(FGenericPlatformMath::Fmod(FGenericPlatformMath::Fmod(Actor->GetActorRotation().Yaw, 90) + 90, 90))++;
-        }
+	UAABlueprint* Blueprint = NewObject<UAABlueprint>(WorldContext->GetWorld());
+	Blueprint->ObjectsToSerialize = ObjectsToSerialize;
+	Blueprint->BlueprintHeader.GameVersion = FEngineVersion::Current().GetChangelist();
+	Blueprint->BlueprintHeader.BoundingBox = FAABuildingsDataHelper::CalculateBoundingBox(ObjectsToSerialize);
+	Blueprint->BlueprintHeader.BuildCosts = FAABuildingsDataHelper::CalculateBuildCosts(ObjectsToSerialize);
+	Blueprint->BlueprintHeader.OtherItems = FAABuildingsDataHelper::CalculateOtherItems(ObjectsToSerialize);
+	Blueprint->SerializeObjects();
+	
+	// Reset the Center and Rotation as the TOC is serialized relative to those
+	Blueprint->BlueprintHeader.BoundingBox.Center = FVector::ZeroVector;
+	Blueprint->BlueprintHeader.BoundingBox.Rotation = FRotator::ZeroRotator;
 
-    RotationCount.ValueSort([](const uint32& A, const uint32& B) {
-        return A > B;
-    });
-
-    const FRotator Rotation = FRotator(0, (*RotationCount.CreateIterator()).Key, 0);
-
-    FVector Min = FVector(TNumericLimits<float>::Max());
-    FVector Max = FVector(-TNumericLimits<float>::Max());
-    
-    for(UObject* Object : ObjectsToSerialize)
-        if(AFGBuildable* Buildable = Cast<AFGBuildable>(Object))
-        {
-            if(UShapeComponent* Clearance = Buildable->GetClearanceComponent())
-            {
-                if(UBoxComponent* Box = Cast<UBoxComponent>(Clearance))
-                {
-                    const FVector Extents = Box->GetScaledBoxExtent();
-                    for(int i = 0; i < (1 << 3); i++)
-                    {
-                        const int X = (i & 1) ? 1 : -1;
-                        const int Y = (i & 2) ? 1 : -1;
-                        const int Z = (i & 4) ? 1 : -1;
-                        FVector Corner = FVector(Extents.X * X, Extents.Y * Y, Extents.Z * Z);
-                        Min = Min.ComponentMin(Rotation.UnrotateVector(Buildable->GetActorRotation().RotateVector(Box->GetComponentTransform().GetLocation() + Corner - Buildable->GetActorLocation()) + Buildable->GetActorLocation()));
-                        Max = Max.ComponentMax(Rotation.UnrotateVector(Buildable->GetActorRotation().RotateVector(Box->GetComponentTransform().GetLocation() + Corner - Buildable->GetActorLocation()) + Buildable->GetActorLocation()));
-                    }
-                }
-                else
-                {
-                    // Are there any other types used as clearance?
-                }
-            }
-            else
-            {
-                FActorSpawnParameters Params;
-                Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-                Params.bDeferConstruction = true;
-                FTransform TempBuildingTransform = FTransform(FQuat::Identity, FVector::ZeroVector, Buildable->GetActorScale3D());
-                AFGBuildable* TempBuilding = this->GetWorld()->SpawnActor<AFGBuildable>(Buildable->GetClass(), TempBuildingTransform, Params);
-                TempBuilding->bDeferBeginPlay = true;
-                TempBuilding->FinishSpawning(TempBuildingTransform, true);
-                FVector Origin;
-                FVector Extents;
-                TempBuilding->GetActorBounds(true, Origin, Extents);
-                Extents = FVector(FGenericPlatformMath::RoundToFloat(Extents.X), FGenericPlatformMath::RoundToFloat(Extents.Y), FGenericPlatformMath::RoundToFloat(Extents.Z));
-
-                for(int i = 0; i < (1 << 3); i++)
-                {
-                    const int X = (i & 1) ? 1 : -1;
-                    const int Y = (i & 2) ? 1 : -1;
-                    const int Z = (i & 4) ? 1 : -1;
-                    FVector Corner = FVector(Extents.X * X, Extents.Y * Y, Extents.Z * Z);
-                    Min = Min.ComponentMin(Rotation.UnrotateVector(Buildable->GetActorLocation() + Buildable->GetActorRotation().RotateVector(Origin + Corner)));
-                    Max = Max.ComponentMax(Rotation.UnrotateVector(Buildable->GetActorLocation() + Buildable->GetActorRotation().RotateVector(Origin + Corner)));
-                }
-                TempBuilding->Destroy();
-            }
-        }
-
-    Min = Rotation.RotateVector(Min);
-    Max = Rotation.RotateVector(Max);
-
-    const FVector Center = (Min + Max) / 2;
-
-    const FVector Bounds = Rotation.UnrotateVector(Max - Center);
-            
-    return FAARotatedBoundingBox{Center, FVector(FGenericPlatformMath::RoundToFloat(Bounds.X), FGenericPlatformMath::RoundToFloat(Bounds.Y), FGenericPlatformMath::RoundToFloat(Bounds.Z)), Rotation};
-}
-
-TMap<TSubclassOf<UFGItemDescriptor>, int32> UAABlueprint::CalculateBuildCosts()
-{
-	TMap<TSubclassOf<UFGItemDescriptor>, int32> RequiredItems;
-	for(UObject* Object : ObjectsToSerialize)
-	{
-		if(AFGBuildable* Buildable = Cast<AFGBuildable>(Object))
-		{
-			{
-				TArray<FItemAmount> BuildingIngredients = UFGRecipe::GetIngredients(Buildable->GetBuiltWithRecipe());
-				for(const FItemAmount ItemAmount : BuildingIngredients)
-					RequiredItems.FindOrAdd(ItemAmount.ItemClass) += ItemAmount.Amount;
-			}
-		}
-	}
-	return RequiredItems;
-}
-
-TMap<TSubclassOf<UFGItemDescriptor>, int32> UAABlueprint::CalculateOtherItems()
-{
-	TMap<TSubclassOf<UFGItemDescriptor>, int32> RequiredItems;
-	for(UObject* Object : ObjectsToSerialize)
-	{
-		if(AFGBuildable* Buildable = Cast<AFGBuildable>(Object))
-		{
-			{
-				if(AFGBuildableFactory* FactoryBuildable = Cast<AFGBuildableFactory>(Buildable))
-				{
-					if(FactoryBuildable->mInventoryPotential)
-					{
-						TArray<FInventoryStack> Stacks;
-						FactoryBuildable->mInventoryPotential->GetInventoryStacks(Stacks);
-						for(const FInventoryStack Stack : Stacks)
-							if(Stack.HasItems())
-								RequiredItems.FindOrAdd(Stack.Item.ItemClass) += Stack.NumItems;
-					}
-				}
-			}
-		}
-	}
-	return RequiredItems;
+	return Blueprint;
 }
 
 void UAABlueprint::SerializeTOC()
 {
-	FAARotatedBoundingBox BoundingBox = CalculateBoundingBox();
+	FAARotatedBoundingBox BoundingBox = BlueprintHeader.BoundingBox;
 	FTransform Center = FTransform(FQuat(BoundingBox.Rotation), BoundingBox.Center, FVector::OneVector);
 	FArchive Unused;
 	FAAObjectReferenceArchive ObjectReferenceArchive(Unused, ObjectsToSerialize);
@@ -301,34 +195,6 @@ void UAABlueprint::SerializeBlueprint(FArchive& Ar)
 	Ar << ObjectsData;
 }
 
-bool UAABlueprint::SaveBlueprint(const FString& FilePath)
-{
-	SerializeObjects();
-	TArray<uint8> FileRaw;
-	FMemoryWriter MemoryWriter(FileRaw);
-	FObjectAndNameAsStringProxyArchive MemoryWriterProxy(MemoryWriter, true);
-	BlueprintHeader.GameVersion = FEngineVersion::Current().GetChangelist();
-	BlueprintHeader.BoundingBox = CalculateBoundingBox();
-	// Reset the Center and Rotation as the TOC is serialized relative to those
-	BlueprintHeader.BoundingBox.Center = FVector::ZeroVector;
-	BlueprintHeader.BoundingBox.Rotation = FRotator::ZeroRotator;
-	BlueprintHeader.BuildCosts = CalculateBuildCosts();
-	BlueprintHeader.OtherItems = CalculateOtherItems();
-	SerializeBlueprint(MemoryWriterProxy);
-	return !MemoryWriter.IsError() && FFileHelper::SaveArrayToFile(FileRaw, *FilePath);
-}
-
-bool UAABlueprint::LoadBlueprint(const FString& FilePath)
-{
-	TArray<uint8> FileRaw;
-	if (!FFileHelper::LoadFileToArray(FileRaw, *FilePath))
-		return false;
-	FMemoryReader MemoryReader(FileRaw);
-	FObjectAndNameAsStringProxyArchive MemoryReaderProxy(MemoryReader, true);
-	SerializeBlueprint(MemoryReaderProxy);
-	return !MemoryReader.IsError();
-}
-
 FArchive& operator<<(FArchive& Ar, FAAObjectReference& ObjectReference)
 {
 	Ar << ObjectReference.Idx;
@@ -364,9 +230,4 @@ FArchive& operator<<(FArchive& Ar, FAABlueprintObjectsData& BuildingData)
 {
 	Ar << BuildingData.SerializedData;
 	return Ar;
-}
-
-FString UAABlueprint::GetBlueprintPath(FString Name)
-{
-	return FPaths::ProjectSavedDir() / TEXT("AreaActionsBlueprints") / FString::Printf(TEXT("%s.aabp"), *Name);
 }

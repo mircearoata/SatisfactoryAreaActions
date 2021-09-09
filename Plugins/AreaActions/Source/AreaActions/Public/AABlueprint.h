@@ -4,15 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "AAAction.h"
-#include "AAAction.h"
 #include "AACopyBuildingsComponent.h"
 #include "AABlueprint.generated.h"
 
 /**
  * 
 */
-class AREAACTIONS_API FAABlueprintHeader
+USTRUCT( BlueprintType )
+struct AREAACTIONS_API FAABlueprintHeader
 {
+	GENERATED_BODY()
+
 public:
 	enum class HeaderFormatVersion : uint8
 	{		
@@ -25,6 +27,8 @@ public:
 	};
 
 	int32 GameVersion;
+
+	FString BlueprintName;
 	
 	FAARotatedBoundingBox BoundingBox;
     TMap<TSubclassOf<UFGItemDescriptor>, int32> BuildCosts;
@@ -91,28 +95,22 @@ public:
 		LatestVersion = VersionPlusOne - 1 // Last version to use
 	};
 
-	bool LoadBlueprint(const FString& FilePath);
-
-	bool SetRootSet(TArray<AActor*>& Actors, TArray<AActor*> OutActorsWithIssues);
-
-	bool SaveBlueprint(const FString& FilePath);
+	static UAABlueprint* FromRootSet(UObject* WorldContext, TArray<AActor*>& Actors, TArray<AActor*>& OutActorsWithIssues);
 
 	FORCEINLINE TArray<FAABlueprintObjectTOC> GetObjectTOC() const { return ObjectTOC; }
 	FORCEINLINE FAABlueprintObjectsData GetObjectsData() const { return ObjectsData; }
 	FORCEINLINE FAARotatedBoundingBox GetBoundingBox() const { return BlueprintHeader.BoundingBox; }
 	FORCEINLINE TMap<TSubclassOf<UFGItemDescriptor>, int32> GetBuildCosts() const { return BlueprintHeader.BuildCosts; }
 	FORCEINLINE TMap<TSubclassOf<UFGItemDescriptor>, int32> GetOtherItems() const { return BlueprintHeader.OtherItems; }
+	FORCEINLINE void SetName(const FString BlueprintName) { BlueprintHeader.BlueprintName = BlueprintName; }
 
-	static FString GetBlueprintPath(FString Name);
-private:
-	FAARotatedBoundingBox CalculateBoundingBox();
-	TMap<TSubclassOf<UFGItemDescriptor>, int32> CalculateBuildCosts();
-	TMap<TSubclassOf<UFGItemDescriptor>, int32> CalculateOtherItems();
-	
+private:	
 	void SerializeTOC();
 	void SerializeData();
 	void SerializeObjects();
 	void SerializeBlueprint(FArchive& Ar);
+
+	friend class UAABlueprintSystem;
 
 protected:
 	FAABlueprintHeader BlueprintHeader;

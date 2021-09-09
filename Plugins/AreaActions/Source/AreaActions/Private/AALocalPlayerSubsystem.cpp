@@ -2,6 +2,7 @@
 
 #include "Buildables/FGBuildable.h"
 #include "FGOutlineComponent.h"
+#include "Actions/AALoadBlueprint.h"
 #include "GenericPlatform/GenericPlatformMath.h"
 
 UAALocalPlayerSubsystem::UAALocalPlayerSubsystem() : Super() {
@@ -145,8 +146,12 @@ void GetMostCommonRotation(TArray<AActor*>& Actors, FRotator& Rotation) {
 
 bool UAALocalPlayerSubsystem::RunAction(const TSubclassOf<AAAAction> ActionClass, AAAEquipment* Equipment, FText& Error) {
 	if (this->AreaCorners.Num() < 3 && this->ExtraActors.Num() == 0) {
-		Error = AreaNotSetMessage;
-		return false;
+		// TODO: Blueprint placing should not be an action
+		if(!ActionClass->IsChildOf(AAALoadBlueprint::StaticClass()))
+		{
+			Error = AreaNotSetMessage;
+			return false;
+		}
 	}
 	if (this->CurrentAction) {
 		Error = ConflictingActionRunningMessage;

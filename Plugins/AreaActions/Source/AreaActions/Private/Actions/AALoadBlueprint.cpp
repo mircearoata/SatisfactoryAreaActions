@@ -2,6 +2,7 @@
 
 #include "AABlueprint.h"
 #include "AABlueprintFunctionLibrary.h"
+#include "AABlueprintSystem.h"
 #include "AAEquipment.h"
 #include "FGCharacterPlayer.h"
 #include "FGInventoryComponent.h"
@@ -125,10 +126,10 @@ void AAALoadBlueprint::Run_Implementation() {
 	this->ShowSelectBlueprintWidget();
 }
 
-void AAALoadBlueprint::NameSelected(const FString BlueprintName)
+void AAALoadBlueprint::PathSelected(const FString BlueprintPath)
 {
-	Blueprint = NewObject<UAABlueprint>(GetWorld());
-	if (!Blueprint->LoadBlueprint(UAABlueprint::GetBlueprintPath(BlueprintName))) {
+	Blueprint = GetGameInstance()->GetSubsystem<UAABlueprintSystem>()->LoadBlueprint(BlueprintPath);
+	if (!Blueprint) {
 		// Error handling
 		this->Done();
 	}

@@ -1,0 +1,45 @@
+﻿// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "AABlueprint.h"
+#include "AABlueprintSystem.generated.h"
+
+/**
+ * 
+ */
+UCLASS()
+class AREAACTIONS_API UAABlueprintSystem : public UGameInstanceSubsystem
+{
+	GENERATED_BODY()
+
+public:
+	UAABlueprintSystem();
+
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+
+	void DiscoverBlueprints();
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE TMap<FString, FAABlueprintHeader> GetCachedBlueprints() const { return CachedBlueprints; }
+	
+	bool SaveBlueprint(const FString FilePath, UAABlueprint* Blueprint);
+	UAABlueprint* LoadBlueprint(const FString FilePath);
+	static FString GetBlueprintsDir();
+	static FString GetBlueprintPath(const FString Name);
+
+	UFUNCTION(BlueprintPure)
+	static FORCEINLINE FString GetBlueprintName( UPARAM( ref ) FAABlueprintHeader& Header ) { return Header.BlueprintName; }
+
+	UFUNCTION(BlueprintPure)
+	static FORCEINLINE FAARotatedBoundingBox GetBoundingBox( UPARAM( ref ) FAABlueprintHeader& Header ) { return Header.BoundingBox; }
+
+	UFUNCTION(BlueprintPure)
+	static FORCEINLINE TMap<TSubclassOf<UFGItemDescriptor>, int32> GetBuildCosts( UPARAM( ref ) FAABlueprintHeader& Header ) { return Header.BuildCosts; }
+
+	UFUNCTION(BlueprintPure)
+	static FORCEINLINE TMap<TSubclassOf<UFGItemDescriptor>, int32> GetOtherItems( UPARAM( ref ) FAABlueprintHeader& Header ) { return Header.OtherItems; }
+private:
+	bool SaveBlueprintInternal(const FString FilePath, UAABlueprint* Blueprint) const;
+	TMap<FString, FAABlueprintHeader> CachedBlueprints;	
+};

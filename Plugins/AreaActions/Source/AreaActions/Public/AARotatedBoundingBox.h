@@ -2,7 +2,7 @@
 
 #include "AARotatedBoundingBox.generated.h"
 
-USTRUCT(Blueprintable)
+USTRUCT(Blueprintable, BlueprintType)
 struct FAARotatedBoundingBox
 {
 	GENERATED_BODY()

@@ -2,6 +2,7 @@
 
 #include "AACopyBuildingsComponent.h"
 
+#include "AABuildingsDataHelper.h"
 #include "AAObjectCollectorArchive.h"
 #include "AAObjectReferenceArchive.h"
 #include "AAObjectValidatorArchive.h"
@@ -17,7 +18,7 @@
 #include "FGProductionIndicatorInstanceComponent.h"
 #include "Components/SplineMeshComponent.h"
 
-void PreSaveGame(UObject* Object)
+FORCEINLINE void PreSaveGame(UObject* Object)
 {
     if (Object->Implements<UFGSaveInterface>())
         IFGSaveInterface::Execute_PreSaveGame(
@@ -25,7 +26,7 @@ void PreSaveGame(UObject* Object)
             FEngineVersion::Current().GetChangelist());
 }
 
-void PostSaveGame(UObject* Object)
+FORCEINLINE void PostSaveGame(UObject* Object)
 {
     if (Object->Implements<UFGSaveInterface>())
         IFGSaveInterface::Execute_PostSaveGame(
@@ -33,7 +34,7 @@ void PostSaveGame(UObject* Object)
             FEngineVersion::Current().GetChangelist());
 }
 
-void PreLoadGame(UObject* Object)
+FORCEINLINE void PreLoadGame(UObject* Object)
 {
     if (Object->Implements<UFGSaveInterface>())
         IFGSaveInterface::Execute_PreLoadGame(
@@ -41,7 +42,7 @@ void PreLoadGame(UObject* Object)
             FEngineVersion::Current().GetChangelist());
 }
 
-void PostLoadGame(UObject* Object)
+FORCEINLINE void PostLoadGame(UObject* Object)
 {
     if (Object->Implements<UFGSaveInterface>())
         IFGSaveInterface::Execute_PostLoadGame(
@@ -117,84 +118,7 @@ bool UAACopyBuildingsComponent::SetBuildings(TArray<AFGBuildable*>& Buildings,
 
 void UAACopyBuildingsComponent::CalculateBounds()
 {
-    TMap<float, uint32> RotationCount;
-    for(UObject* Object : this->Original)
-        if(AActor* Actor = Cast<AActor>(Object))
-        {
-            TArray<USplineMeshComponent*> SplineMeshComponents;
-            Actor->GetComponents<USplineMeshComponent>(SplineMeshComponents);
-            if(SplineMeshComponents.Num() > 0)
-                continue;
-            RotationCount.FindOrAdd(FGenericPlatformMath::Fmod(FGenericPlatformMath::Fmod(Actor->GetActorRotation().Yaw, 90) + 90, 90))++;
-        }
-
-    RotationCount.ValueSort([](const uint32& A, const uint32& B) {
-        return A > B;
-    });
-
-    const FRotator Rotation = FRotator(0, (*RotationCount.CreateIterator()).Key, 0);
-
-    FVector Min = FVector(TNumericLimits<float>::Max());
-    FVector Max = FVector(-TNumericLimits<float>::Max());
-    
-    for(UObject* Object : this->Original)
-        if(AFGBuildable* Buildable = Cast<AFGBuildable>(Object))
-        {
-            if(UShapeComponent* Clearance = Buildable->GetClearanceComponent())
-            {
-                if(UBoxComponent* Box = Cast<UBoxComponent>(Clearance))
-                {
-                    const FVector Extents = Box->GetScaledBoxExtent();
-                    for(int i = 0; i < (1 << 3); i++)
-                    {
-                        const int X = (i & 1) ? 1 : -1;
-                        const int Y = (i & 2) ? 1 : -1;
-                        const int Z = (i & 4) ? 1 : -1;
-                        FVector Corner = FVector(Extents.X * X, Extents.Y * Y, Extents.Z * Z);
-                        Min = Min.ComponentMin(Rotation.UnrotateVector(Buildable->GetActorRotation().RotateVector(Box->GetComponentTransform().GetLocation() + Corner - Buildable->GetActorLocation()) + Buildable->GetActorLocation()));
-                        Max = Max.ComponentMax(Rotation.UnrotateVector(Buildable->GetActorRotation().RotateVector(Box->GetComponentTransform().GetLocation() + Corner - Buildable->GetActorLocation()) + Buildable->GetActorLocation()));
-                    }
-                }
-                else
-                {
-                    // Are there any other types used as clearance?
-                }
-            }
-            else
-            {
-                FActorSpawnParameters Params;
-                Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-                Params.bDeferConstruction = true;
-                FTransform TempBuildingTransform = FTransform(FQuat::Identity, FVector::ZeroVector, Buildable->GetActorScale3D());
-                AFGBuildable* TempBuilding = this->GetWorld()->SpawnActor<AFGBuildable>(Buildable->GetClass(), TempBuildingTransform, Params);
-                TempBuilding->bDeferBeginPlay = true;
-                TempBuilding->FinishSpawning(TempBuildingTransform, true);
-                FVector Origin;
-                FVector Extents;
-                TempBuilding->GetActorBounds(true, Origin, Extents);
-                Extents = FVector(FGenericPlatformMath::RoundToFloat(Extents.X), FGenericPlatformMath::RoundToFloat(Extents.Y), FGenericPlatformMath::RoundToFloat(Extents.Z));
-
-                for(int i = 0; i < (1 << 3); i++)
-                {
-                    const int X = (i & 1) ? 1 : -1;
-                    const int Y = (i & 2) ? 1 : -1;
-                    const int Z = (i & 4) ? 1 : -1;
-                    FVector Corner = FVector(Extents.X * X, Extents.Y * Y, Extents.Z * Z);
-                    Min = Min.ComponentMin(Rotation.UnrotateVector(Buildable->GetActorLocation() + Buildable->GetActorRotation().RotateVector(Origin + Corner)));
-                    Max = Max.ComponentMax(Rotation.UnrotateVector(Buildable->GetActorLocation() + Buildable->GetActorRotation().RotateVector(Origin + Corner)));
-                }
-                TempBuilding->Destroy();
-            }
-        }
-
-    Min = Rotation.RotateVector(Min);
-    Max = Rotation.RotateVector(Max);
-
-    const FVector Center = (Min + Max) / 2;
-
-    const FVector Bounds = Rotation.UnrotateVector(Max - Center);
-            
-    this->BuildingsBounds = FAARotatedBoundingBox{Center, FVector(FGenericPlatformMath::RoundToFloat(Bounds.X), FGenericPlatformMath::RoundToFloat(Bounds.Y), FGenericPlatformMath::RoundToFloat(Bounds.Z)), Rotation};
+    this->BuildingsBounds = FAABuildingsDataHelper::CalculateBoundingBox(this->Original);
 }
 
 void UAACopyBuildingsComponent::SerializeOriginal()
@@ -374,6 +298,8 @@ void UAACopyBuildingsComponent::MoveCopy(const int CopyId, const FVector Offset,
 
 void UAACopyBuildingsComponent::RemoveCopy(const int CopyId)
 {
+    if(!Preview.Contains(CopyId))
+        return;
     for(const auto& [_, Hologram] : this->Preview[CopyId].Holograms)
         Hologram->Destroy();
     this->Preview.Remove(CopyId);

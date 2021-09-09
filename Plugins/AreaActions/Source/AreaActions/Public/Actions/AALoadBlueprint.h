@@ -45,7 +45,7 @@ public:
 	void ShowSelectBlueprintWidget();
 
 	UFUNCTION(BlueprintCallable)
-	void NameSelected(const FString BlueprintName);
+	void PathSelected(const FString BlueprintPath);
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void ShowPlaceBlueprintWidget();
