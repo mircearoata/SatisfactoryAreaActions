@@ -53,7 +53,7 @@ void AAAEquipment::AddActionWidget(UWidget* Widget)
 
 void AAAEquipment::RemoveActionWidget(UWidget* Widget)
 {
-	LocalPlayerSubsystem->ActionWidgets.Add(Widget);
+	LocalPlayerSubsystem->ActionWidgets.Remove(Widget);
 	UpdateDisplayedActionWidget();
 }
 
