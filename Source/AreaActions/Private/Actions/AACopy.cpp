@@ -51,9 +51,18 @@ void AAACopy::PrimaryFire()
 	{
 		bIsPickingAnchor = false;
 		FHitResult HitResult;
-		if(AAEquipment->RaycastMouseWithRange(HitResult, true, true, true) && Actors.Contains(HitResult.Actor))
+		TMap<AFGBuildable*, AFGBuildableHologram*> PreviewHolograms;
+		CopyBuildingsComponent->GetBuildingHolograms(0, PreviewHolograms);
+		if(AAEquipment->RaycastMouseWithRange(HitResult, true, true, true))
 		{
-			Anchor = static_cast<AFGBuildable*>(HitResult.Actor.Get());
+			if(Actors.Contains(HitResult.Actor))
+			{
+				Anchor = static_cast<AFGBuildable*>(HitResult.Actor.Get());
+			}
+			if(auto* Buildable = PreviewHolograms.FindKey(static_cast<AFGBuildableHologram*>(HitResult.Actor.Get())))
+			{
+				Anchor = static_cast<AFGBuildable*>(*Buildable);
+			}
 		}
 		else
 		{

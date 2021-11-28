@@ -110,6 +110,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void GetAllPreviewHolograms(TArray<AFGBuildableHologram*>& OutPreviewHolograms);
+	
+	UFUNCTION(BlueprintCallable)
+	void GetBuildingHolograms(int CopyId, TMap<AFGBuildable*, AFGBuildableHologram*>& OutPreviewHolograms);
 
 private:
 	FTransform TransformAroundPoint(FTransform OriginalTransform, FVector Offset, FRotator Rotation, FVector RotationCenter);

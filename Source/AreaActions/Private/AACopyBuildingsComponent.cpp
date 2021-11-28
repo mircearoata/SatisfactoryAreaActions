@@ -431,3 +431,8 @@ void UAACopyBuildingsComponent::GetAllPreviewHolograms(TArray<AFGBuildableHologr
         }
     }
 }
+
+void UAACopyBuildingsComponent::GetBuildingHolograms(const int CopyId, TMap<AFGBuildable*, AFGBuildableHologram*>& OutPreviewHolograms)
+{
+    OutPreviewHolograms = this->Preview[CopyId].Holograms;
+}
