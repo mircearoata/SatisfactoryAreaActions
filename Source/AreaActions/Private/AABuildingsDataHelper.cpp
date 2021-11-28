@@ -6,6 +6,7 @@
 #include "Buildables/FGBuildable.h"
 #include "Buildables/FGBuildableFactory.h"
 #include "Components/SplineMeshComponent.h"
+#include "FGClearanceComponent.h"
 
 FAARotatedBoundingBox FAABuildingsDataHelper::CalculateBoundingBox(const TArray<UObject*>& Objects)
 {
@@ -32,7 +33,7 @@ FAARotatedBoundingBox FAABuildingsDataHelper::CalculateBoundingBox(const TArray<
     for(UObject* Object : Objects)
         if(AFGBuildable* Buildable = Cast<AFGBuildable>(Object))
         {
-            if(UShapeComponent* Clearance = Buildable->GetClearanceComponent())
+            if(UFGClearanceComponent* Clearance = Buildable->GetClearanceComponent())
             {
                 if(UBoxComponent* Box = Cast<UBoxComponent>(Clearance))
                 {

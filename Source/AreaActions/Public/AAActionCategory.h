@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
+#include "Styling/SlateBrush.h"
+#include "Templates/SubclassOf.h"
 #include "AAActionCategory.generated.h"
 
 /**

@@ -4,7 +4,7 @@
 
 #include "AAActionCategory.h"
 #include "CoreMinimal.h"
-
+#include "Styling/SlateBrush.h"
 #include "GameFramework/Actor.h"
 #include "AAAction.generated.h"
 

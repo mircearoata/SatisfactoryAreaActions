@@ -4,6 +4,7 @@
 #include "UObject/CoreRedirects.h"
 
 DEFINE_LOG_CATEGORY(LogAreaActions);
+DEFINE_LOG_CATEGORY(LogGame);
 
 void FAreaActionsModule::StartupModule() {
 #if !WITH_EDITOR && AA_DEBUG

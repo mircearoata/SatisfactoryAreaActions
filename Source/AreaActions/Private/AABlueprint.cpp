@@ -7,6 +7,7 @@
 #include "AAObjectCollectorArchive.h"
 #include "AAObjectReferenceArchive.h"
 #include "AAObjectValidatorArchive.h"
+#include "AASerializationHelpers.h"
 #include "FGSaveInterface.h"
 #include "FGSaveSession.h"
 #include "Buildables/FGBuildable.h"
@@ -14,39 +15,6 @@
 #include "Components/SplineMeshComponent.h"
 #include "TopologicalSort/DirectedGraph.h"
 #include "TopologicalSort/TopologicalSort.h"
-
-
-FORCEINLINE void PreSaveGame(UObject* Object)
-{
-	if (Object->Implements<UFGSaveInterface>())
-		IFGSaveInterface::Execute_PreSaveGame(
-			Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
-			FEngineVersion::Current().GetChangelist());
-}
-
-FORCEINLINE void PostSaveGame(UObject* Object)
-{
-	if (Object->Implements<UFGSaveInterface>())
-		IFGSaveInterface::Execute_PostSaveGame(
-			Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
-			FEngineVersion::Current().GetChangelist());
-}
-
-FORCEINLINE void PreLoadGame(UObject* Object)
-{
-	if (Object->Implements<UFGSaveInterface>())
-		IFGSaveInterface::Execute_PreLoadGame(
-			Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
-			FEngineVersion::Current().GetChangelist());
-}
-
-FORCEINLINE void PostLoadGame(UObject* Object)
-{
-	if (Object->Implements<UFGSaveInterface>())
-		IFGSaveInterface::Execute_PostLoadGame(
-			Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
-			FEngineVersion::Current().GetChangelist());
-}
 
 using HeaderFormatVersion = FAABlueprintHeader::HeaderFormatVersion;
 using BlueprintFormatVersion = UAABlueprint::BlueprintFormatVersion;
@@ -179,13 +147,13 @@ void UAABlueprint::SerializeData()
 void UAABlueprint::SerializeObjects()
 {
 	for (UObject* Object : ObjectsToSerialize)
-		PreSaveGame(Object);
+		UAASerializationHelpers::CallPreSaveGame(Object);
 
 	SerializeTOC();
 	SerializeData();
     
 	for (UObject* Object : ObjectsToSerialize)
-		PostSaveGame(Object);
+		UAASerializationHelpers::CallPostSaveGame(Object);
 }
 
 void UAABlueprint::SerializeBlueprint(FArchive& Ar)

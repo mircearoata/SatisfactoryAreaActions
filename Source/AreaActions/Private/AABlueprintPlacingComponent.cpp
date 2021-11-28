@@ -5,6 +5,7 @@
 #include "AAObjectCollectorArchive.h"
 #include "AAObjectReferenceArchive.h"
 #include "AAObjectValidatorArchive.h"
+#include "AASerializationHelpers.h"
 #include "AreaActionsModule.h"
 #include "Buildables/FGBuildableConveyorBase.h"
 #include "FGColoredInstanceMeshProxy.h"
@@ -16,39 +17,6 @@
 #include "TopologicalSort/TopologicalSort.h"
 #include "FGGameState.h"
 #include "FGProductionIndicatorInstanceComponent.h"
-#include "Components/SplineMeshComponent.h"
-
-FORCEINLINE void PreSaveGame(UObject* Object)
-{
-    if (Object->Implements<UFGSaveInterface>())
-        IFGSaveInterface::Execute_PreSaveGame(
-            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
-            FEngineVersion::Current().GetChangelist());
-}
-
-FORCEINLINE void PostSaveGame(UObject* Object)
-{
-    if (Object->Implements<UFGSaveInterface>())
-        IFGSaveInterface::Execute_PostSaveGame(
-            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
-            FEngineVersion::Current().GetChangelist());
-}
-
-FORCEINLINE void PreLoadGame(UObject* Object)
-{
-    if (Object->Implements<UFGSaveInterface>())
-        IFGSaveInterface::Execute_PreLoadGame(
-            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
-            FEngineVersion::Current().GetChangelist());
-}
-
-FORCEINLINE void PostLoadGame(UObject* Object)
-{
-    if (Object->Implements<UFGSaveInterface>())
-        IFGSaveInterface::Execute_PostLoadGame(
-            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
-            FEngineVersion::Current().GetChangelist());
-}
 
 UAABlueprintPlacingComponent::UAABlueprintPlacingComponent()
 {
@@ -72,7 +40,7 @@ void UAABlueprintPlacingComponent::FixReferencesForCopy(const FAABlueprintObject
     TArray<UObject*> PreviewObjects;
     for(const auto& [_, NewObject] : Copy.GetObjects())
     {
-        PreLoadGame(NewObject);
+        UAASerializationHelpers::CallPreLoadGame(NewObject);
         PreviewObjects.Add(NewObject);
     }
 
@@ -88,7 +56,7 @@ void UAABlueprintPlacingComponent::FixReferencesForCopy(const FAABlueprintObject
     
     for(const auto& [_, NewObject] : Copy.GetObjects())
     {
-        PostLoadGame(NewObject);
+        UAASerializationHelpers::CallPostLoadGame(NewObject);
     }
 
     // Remove items
@@ -178,7 +146,7 @@ int UAABlueprintPlacingComponent::AddCopy(const FVector Offset, const FRotator R
             FTransform NewTransform = TransformAroundPoint(ObjectTOC.Transform, Relative ? Blueprint->GetBoundingBox().Rotation.RotateVector(Offset) : Offset, Rotation, RotationCenter);
             Hologram->SetActorTransform(NewTransform);
             Hologram->SetActorHiddenInGame(false);
-            Hologram->SetPlacementMaterial(true);
+            Hologram->SetPlacementMaterialState(EHologramMaterialState::HMS_OK);
             this->Preview[CurrentId].Holograms.Add(ObjectIdx, Hologram);
             TArray<UPrimitiveComponent*> Components;
             Hologram->GetComponents<UPrimitiveComponent>(Components);

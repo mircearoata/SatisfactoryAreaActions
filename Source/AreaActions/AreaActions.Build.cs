@@ -14,6 +14,8 @@ public class AreaActions : ModuleRules
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
         bLegacyPublicIncludePaths = false;
 
+        PrivatePCHHeaderFile = "Public/AreaActions.h";
+        
 		PublicDependencyModuleNames.AddRange(new string[] {
             "Core", "CoreUObject",
             "Engine",

@@ -19,7 +19,7 @@
 		{
 			"Name": "AreaActions",
 			"Type": "Runtime",
-			"LoadingPhase": "PostSplashScreen"
+			"LoadingPhase": "Default"
 		}
 	],
     "Plugins": [

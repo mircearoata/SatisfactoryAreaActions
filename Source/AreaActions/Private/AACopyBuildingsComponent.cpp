@@ -6,6 +6,7 @@
 #include "AAObjectCollectorArchive.h"
 #include "AAObjectReferenceArchive.h"
 #include "AAObjectValidatorArchive.h"
+#include "AASerializationHelpers.h"
 #include "Buildables/FGBuildableConveyorBase.h"
 #include "FGColoredInstanceMeshProxy.h"
 #include "FGFactorySettings.h"
@@ -16,39 +17,6 @@
 #include "TopologicalSort/TopologicalSort.h"
 #include "FGGameState.h"
 #include "FGProductionIndicatorInstanceComponent.h"
-#include "Components/SplineMeshComponent.h"
-
-FORCEINLINE void PreSaveGame(UObject* Object)
-{
-    if (Object->Implements<UFGSaveInterface>())
-        IFGSaveInterface::Execute_PreSaveGame(
-            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
-            FEngineVersion::Current().GetChangelist());
-}
-
-FORCEINLINE void PostSaveGame(UObject* Object)
-{
-    if (Object->Implements<UFGSaveInterface>())
-        IFGSaveInterface::Execute_PostSaveGame(
-            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
-            FEngineVersion::Current().GetChangelist());
-}
-
-FORCEINLINE void PreLoadGame(UObject* Object)
-{
-    if (Object->Implements<UFGSaveInterface>())
-        IFGSaveInterface::Execute_PreLoadGame(
-            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
-            FEngineVersion::Current().GetChangelist());
-}
-
-FORCEINLINE void PostLoadGame(UObject* Object)
-{
-    if (Object->Implements<UFGSaveInterface>())
-        IFGSaveInterface::Execute_PostLoadGame(
-            Object, UFGSaveSession::GetVersion(UFGSaveSession::Get(Object->GetWorld())->mSaveHeader),
-            FEngineVersion::Current().GetChangelist());
-}
 
 UAACopyBuildingsComponent::UAACopyBuildingsComponent()
 {
@@ -124,7 +92,7 @@ void UAACopyBuildingsComponent::CalculateBounds()
 void UAACopyBuildingsComponent::SerializeOriginal()
 {
     for(UObject* Object : Original)
-        PreSaveGame(Object);
+        UAASerializationHelpers::CallPreSaveGame(Object);
     
     FMemoryWriter Writer = FMemoryWriter(Serialized, true);
     FAAObjectReferenceArchive Ar(Writer, this->Original);
@@ -135,7 +103,7 @@ void UAACopyBuildingsComponent::SerializeOriginal()
         Object->Serialize(Ar);
     
     for(UObject* Object : Original)
-        PostSaveGame(Object);
+        UAASerializationHelpers::CallPostSaveGame(Object);
 }
 
 bool UAACopyBuildingsComponent::ValidateObjects(TArray<AFGBuildable*>& OutBuildingsWithIssues)
@@ -166,7 +134,7 @@ void UAACopyBuildingsComponent::FixReferencesForCopy(const FCopyMap& Copy)
     for(UObject* Object : this->Original)
     {
         UObject* NewObject = Copy.GetObject(Object);
-        PreLoadGame(NewObject);
+        UAASerializationHelpers::CallPreLoadGame(NewObject);
         PreviewObjects.Add(NewObject);
     }
     
@@ -183,7 +151,7 @@ void UAACopyBuildingsComponent::FixReferencesForCopy(const FCopyMap& Copy)
     for(UObject* Object : this->Original)
     {
         UObject* NewObject = Copy.GetObject(Object);
-        PostLoadGame(NewObject);
+        UAASerializationHelpers::CallPostLoadGame(NewObject);
     }
 
     // Remove items
@@ -274,7 +242,7 @@ int UAACopyBuildingsComponent::AddCopy(const FVector Offset, const FRotator Rota
                 FTransform NewTransform = TransformAroundPoint(Buildable->GetActorTransform(), Relative ? BuildingsBounds.Rotation.RotateVector(Offset) : Offset, Rotation, RotationCenter);
                 Hologram->SetActorTransform(NewTransform);
                 Hologram->SetActorHiddenInGame(false);
-                Hologram->SetPlacementMaterial(true);
+                Hologram->SetPlacementMaterialState(EHologramMaterialState::HMS_OK);
                 this->Preview[CurrentId].Holograms.Add(Buildable, Hologram);
             }
         }
