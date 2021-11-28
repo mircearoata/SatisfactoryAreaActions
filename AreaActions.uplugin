@@ -1,8 +1,8 @@
 {
 	"FileVersion": 3,
 	"Version": 2,
-	"VersionName": "2.0.0-beta.3",
-    "SemVersion": "2.0.0-beta.3",
+	"VersionName": "2.0.0-beta.4",
+    "SemVersion": "2.0.0-beta.4",
 	"FriendlyName": "AreaActions",
 	"Description": "Area Actions",
 	"Category": "Other",
@@ -25,7 +25,7 @@
     "Plugins": [
         {
             "Name": "SML",
-            "SemVersion": "^3.0.0",
+            "SemVersion": "^3.2.0",
             "Enabled": true
         }
     ]
