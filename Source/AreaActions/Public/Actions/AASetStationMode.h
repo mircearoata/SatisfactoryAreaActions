@@ -16,5 +16,5 @@ class AREAACTIONS_API AAASetStationMode : public AAAAction
 
 public:
 	UFUNCTION(BlueprintCallable)
-	void SetStationMode(bool IsLoadMode);
+	void SetStationMode(bool IsLoadMode, TMap<TSubclassOf<class AFGBuildable>, int>& Statistics);
 };

@@ -28,3 +28,12 @@ FTransform UAABlueprintFunctionLibrary::GetHologramScroll(AFGHologram* Hologram,
 	Hologram->SetActorHiddenInGame(false);
 	return NewHologramTransform;
 }
+
+UFGHotbarShortcut* UAABlueprintFunctionLibrary::CreateHotbarShortcut(AFGPlayerState* PlayerState, TSubclassOf<UFGHotbarShortcut> HotbarShortcutClass, int32 Index)
+{
+	if(!PlayerState || !HotbarShortcutClass) {
+		return nullptr;
+	}
+
+	return PlayerState->GetOrCreateShortcutOnHotbar(HotbarShortcutClass, PlayerState->mHotbars[PlayerState->GetCurrentHotbarIndex()], Index);
+}

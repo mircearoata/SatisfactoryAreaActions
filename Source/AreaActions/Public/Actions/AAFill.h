@@ -57,10 +57,9 @@ class AREAACTIONS_API AAAFill : public AAAAction
 public:
     AAAFill();
 	virtual void Tick(float DeltaSeconds) override;
+    virtual void EnableInput(APlayerController* PlayerController) override;
     
-    virtual void Run_Implementation() override;
     virtual void OnCancel_Implementation() override;
-    virtual void EquipmentEquipped(class AAAEquipment* Equipment) override;
 
     void PrimaryFire();
     void ScrollUp();
@@ -81,15 +80,12 @@ public:
         OutBorder = this->Border;
         OutRamp = this->Ramp;
     }
-    
-    UFUNCTION(BlueprintImplementableEvent)
-    void ShowFillWidget();
 	
     UFUNCTION(BlueprintCallable)
     void Preview();
 	
     UFUNCTION(BlueprintCallable)
-    void Finish();
+    bool Finish(const TArray<UFGInventoryComponent*>& Inventories, TArray<FInventoryStack>& MissingItems);
 
     UFUNCTION()
     void RemoveMissingItemsWidget();
@@ -101,6 +97,7 @@ protected:
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
     UAACopyBuildingsComponent* CopyBuildingsComponent;
 
+    UPROPERTY(BlueprintReadWrite)
     FVector AreaSize;
     
     FFillCount Count;

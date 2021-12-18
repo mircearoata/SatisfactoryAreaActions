@@ -1,9 +1,12 @@
 ﻿#include "AALocalPlayerSubsystem.h"
 
+#include "FGLocalPlayer.h"
 #include "Buildables/FGBuildable.h"
 #include "FGOutlineComponent.h"
+#include "FGPlayerController.h"
 #include "Actions/AALoadBlueprint.h"
 #include "GenericPlatform/GenericPlatformMath.h"
+#include "UI/FGGameUI.h"
 
 UAALocalPlayerSubsystem::UAALocalPlayerSubsystem() : Super() {
 	this->AreaMinZ = MinZ;
@@ -11,6 +14,77 @@ UAALocalPlayerSubsystem::UAALocalPlayerSubsystem() : Super() {
 	this->CornerIndicatorClass = FSoftClassPath(TEXT("/AreaActions/Indicators/Corner/CornerIndicator.CornerIndicator_C")).TryLoadClass<AAACornerIndicator>();
 	this->WallIndicatorClass = FSoftClassPath(TEXT("/AreaActions/Indicators/Wall/WallIndicator.WallIndicator_C")).TryLoadClass<AAAWallIndicator>();
 	this->HeightIndicatorClass = FSoftClassPath(TEXT("/AreaActions/Indicators/Height/HeightIndicator.HeightIndicator_C")).TryLoadClass<AAAHeightIndicator>();
+}
+
+void UAALocalPlayerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+	if(const ULocalPlayer* LocalPlayer = GetLocalPlayer<UFGLocalPlayer>())
+	{
+		if(const APlayerController* PlayerController = LocalPlayer->GetPlayerController(GetWorld()))
+		{
+			if(const AFGCharacterPlayer* Player = Cast<AFGCharacterPlayer>(PlayerController->GetPawn()))
+			{
+				Player->GetBuildGun()->mOnStateChanged.AddDynamic(this, &UAALocalPlayerSubsystem::OnBuildGunStateChanged);
+			}
+		}
+	}
+}
+
+void UAALocalPlayerSubsystem::SelectMap() {
+	this->ClearSelection();
+	AddCorner(FVector2D(-350000.0, -350000.0));
+	AddCorner(FVector2D(450000.0, -350000.0));
+	AddCorner(FVector2D(450000.0, 450000.0));
+	AddCorner(FVector2D(-350000.0, 450000.0));
+	UpdateHeight();
+}
+
+void UAALocalPlayerSubsystem::ClearSelection() {
+	for (int i = AreaCorners.Num() - 1; i >= 0; i--) {
+		RemoveCorner(i);
+	}
+	AreaMinZ = MinZ;
+	AreaMaxZ = MaxZ;
+	UpdateHeight();
+	ExtraActors.Empty();
+	UpdateExtraActors();
+}
+
+bool UAALocalPlayerSubsystem::RaycastMouseWithRange(FHitResult& OutHitResult, const bool bIgnoreCornerIndicators, const bool bIgnoreWallIndicators, const bool bIgnoreHeightIndicators, const TArray<AActor*> OtherIgnoredActors) const
+{
+	TArray<AActor*> IgnoredActors;
+
+	if (bIgnoreCornerIndicators) {
+		IgnoredActors.Append(CornerIndicators);
+	}
+	if (bIgnoreWallIndicators) {
+		IgnoredActors.Append(WallIndicators);
+	}
+	if (bIgnoreHeightIndicators) {
+		IgnoredActors.Add(TopIndicator);
+		IgnoredActors.Add(BottomIndicator);
+	}
+
+	APlayerController* PlayerController = GetLocalPlayer<ULocalPlayer>()->GetPlayerController(GetWorld());
+	APlayerCameraManager* CameraManager = PlayerController->PlayerCameraManager;
+
+	const FVector CameraLocation = CameraManager->GetCameraLocation();
+	const FVector CameraDirection = CameraManager->GetActorForwardVector();
+
+	const FVector LineTraceStart = CameraLocation + CameraDirection * (static_cast<AFGCharacterPlayer*>(PlayerController->GetPawn())->GetCapsuleComponent()->GetScaledCapsuleRadius() + 5);
+	const FVector LineTraceEnd = CameraLocation + CameraDirection * MaxRaycastDistance;
+
+	FCollisionQueryParams Params = FCollisionQueryParams::DefaultQueryParam;
+	Params.AddIgnoredActors(IgnoredActors);
+	Params.AddIgnoredActors(OtherIgnoredActors);
+	FCollisionObjectQueryParams ObjectParams;
+	ObjectParams.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldStatic);
+	ObjectParams.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldDynamic);
+	ObjectParams.AddObjectTypesToQuery(ECollisionChannel::ECC_GameTraceChannel2); // Hologram
+	ObjectParams.AddObjectTypesToQuery(ECollisionChannel::ECC_GameTraceChannel4); // Clearance
+	ObjectParams.AddObjectTypesToQuery(ECollisionChannel::ECC_GameTraceChannel8); // HologramClearance
+	return GetWorld()->LineTraceSingleByObjectType(OutHitResult, LineTraceStart, LineTraceEnd, ObjectParams, Params);
 }
 
 void UAALocalPlayerSubsystem::UpdateHeight() {
@@ -108,6 +182,16 @@ void UAALocalPlayerSubsystem::DelayedUpdateExtraActors()
 	GetWorld()->GetTimerManager().SetTimerForNextTick(this, &UAALocalPlayerSubsystem::UpdateExtraActors);
 }
 
+void UAALocalPlayerSubsystem::OnBuildGunStateChanged(EBuildGunState NewState)
+{
+	if (NewState != EBuildGunState::BGS_NONE && NewState != EBuildGunState::BGS_MENU)
+	{
+		if (CurrentAction)
+		{
+			CurrentAction->Cancel();
+		}
+	}
+}
 
 void GetMiddleOfActors(TArray<AActor*>& Actors, FVector& Middle) {
 	if (Actors.Num() == 0)
@@ -144,7 +228,7 @@ void GetMostCommonRotation(TArray<AActor*>& Actors, FRotator& Rotation) {
 	Rotation = FRotator(0, BestRotation, 0);
 }
 
-bool UAALocalPlayerSubsystem::RunAction(const TSubclassOf<AAAAction> ActionClass, AAAEquipment* Equipment, FText& Error) {
+bool UAALocalPlayerSubsystem::RunAction(const TSubclassOf<AAAAction> ActionClass, FText& Error) {
 	if (this->AreaCorners.Num() < 3 && this->ExtraActors.Num() == 0) {
 		// TODO: Blueprint placing should not be an action
 		if(!ActionClass->IsChildOf(AAALoadBlueprint::StaticClass()))
@@ -167,7 +251,7 @@ bool UAALocalPlayerSubsystem::RunAction(const TSubclassOf<AAAAction> ActionClass
 
 	this->CurrentAction = GetWorld()->SpawnActor<AAAAction>(ActionClass, Middle, Rotation);
 	this->CurrentAction->SetSubsystem(this);
-	this->CurrentAction->EquipmentEquipped(Equipment);
+	this->CurrentAction->EnableInput(GetLocalPlayer()->GetPlayerController(GetWorld()));
 	this->CurrentAction->SetActors(ActorsInArea);
 	this->CurrentAction->Run();
 	return true;
@@ -176,7 +260,6 @@ bool UAALocalPlayerSubsystem::RunAction(const TSubclassOf<AAAAction> ActionClass
 void UAALocalPlayerSubsystem::ActionDone() {
 	this->CurrentAction->Destroy();
 	this->CurrentAction = nullptr;
-	this->OnActionDone.Broadcast();
 }
 
 bool IsPointInPolygon(const FVector2D Point, TArray<FVector2D>& Polygon) {
@@ -216,4 +299,12 @@ void UAALocalPlayerSubsystem::GetAllActorsInArea(TArray<AActor*>& OutActors) {
 			OutActors.Add(*ActorIt);
 		}
 	}
+}
+
+void UAALocalPlayerSubsystem::ToggleBuildMenu()
+{
+	APlayerController* PlayerController = GetLocalPlayer<ULocalPlayer>()->GetPlayerController(GetWorld());
+	AFGCharacterPlayer* PlayerCharacter = Cast<AFGCharacterPlayer>(PlayerController->GetPawn());
+
+	PlayerCharacter->ToggleBuildGun();
 }

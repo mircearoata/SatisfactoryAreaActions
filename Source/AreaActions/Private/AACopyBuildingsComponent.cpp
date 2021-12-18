@@ -23,7 +23,7 @@ UAACopyBuildingsComponent::UAACopyBuildingsComponent()
     ValidCheckSkipProperties.Add(AActor::StaticClass()->FindPropertyByName(TEXT("Owner")));
 }
 
-bool UAACopyBuildingsComponent::SetActors(TArray<AActor*>& Actors, TArray<AFGBuildable*>& OutBuildingsWithIssues, FText& Error)
+bool UAACopyBuildingsComponent::SetActors(const TArray<AActor*>& Actors, TArray<AFGBuildable*>& OutBuildingsWithIssues, FText& Error)
 {
     TArray<AFGBuildable*> Buildings;
     for (AActor* Actor : Actors)
@@ -41,7 +41,7 @@ void SafeAddEdge(TDirectedGraph<UObject*>& DependencyGraph, UObject* From, UObje
         DependencyGraph.AddEdge(From, To);
 }
 
-bool UAACopyBuildingsComponent::SetBuildings(TArray<AFGBuildable*>& Buildings,
+bool UAACopyBuildingsComponent::SetBuildings(const TArray<AFGBuildable*>& Buildings,
                                              TArray<AFGBuildable*>& OutBuildingsWithIssues,
                                              FText& Error)
 {
@@ -274,7 +274,7 @@ void UAACopyBuildingsComponent::RemoveCopy(const int CopyId)
     this->CopyLocations.Remove(CopyId);
 }
 
-bool UAACopyBuildingsComponent::CheckItems(TMap<TSubclassOf<UFGItemDescriptor>, int32> RemainingItems, TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems, const bool TakeItems) const
+bool UAACopyBuildingsComponent::CheckItems(TMap<TSubclassOf<UFGItemDescriptor>, int32> RemainingItems, const TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems, const bool TakeItems) const
 {
     if(TakeItems)
     {
@@ -310,7 +310,7 @@ bool UAACopyBuildingsComponent::CheckItems(TMap<TSubclassOf<UFGItemDescriptor>, 
     return true;
 }
 
-bool UAACopyBuildingsComponent::TryTakeItems(TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems)
+bool UAACopyBuildingsComponent::TryTakeItems(const TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems)
 {
     if(this->Preview.Num() == 0)
         return true;
@@ -352,7 +352,7 @@ bool UAACopyBuildingsComponent::TryTakeItems(TArray<UFGInventoryComponent*> Inve
     return CheckItems(TotalItems, Inventories, OutMissingItems, true);
 }
 
-bool UAACopyBuildingsComponent::Finish(TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems)
+bool UAACopyBuildingsComponent::Finish(const TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems)
 {
     if(this->CopyLocations.Num() == 0)
         return true;

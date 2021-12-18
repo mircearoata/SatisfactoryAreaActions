@@ -15,10 +15,9 @@ class AREAACTIONS_API AAALoadBlueprint : public AAAAction
 public:
 	AAALoadBlueprint();
 	virtual void Tick(float DeltaSeconds) override;
+	virtual void EnableInput(APlayerController* PlayerController) override;
 	
-	virtual void Run_Implementation() override;
 	virtual void OnCancel_Implementation() override;
-	virtual void EquipmentEquipped(class AAAEquipment* Equipment) override;
 
 	void PrimaryFire();
 	void ScrollUp();
@@ -41,9 +40,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetDeltaFromAnchorTransform(FTransform HologramTransform);
 
-	UFUNCTION(BlueprintImplementableEvent)
-	void ShowSelectBlueprintWidget();
-
 	UFUNCTION(BlueprintCallable)
 	void PathSelected(const FString BlueprintPath);
 
@@ -54,7 +50,7 @@ public:
 	void Preview();
 	
 	UFUNCTION(BlueprintCallable)
-	void Finish();
+	bool Finish(const TArray<UFGInventoryComponent*>& Inventories, TArray<FInventoryStack>& MissingItems);
 
 	UFUNCTION()
 	void RemoveMissingItemsWidget();

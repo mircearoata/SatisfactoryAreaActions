@@ -3,7 +3,7 @@
 #include "AABlueprint.h"
 #include "AABlueprintFunctionLibrary.h"
 #include "AABlueprintSystem.h"
-#include "AAEquipment.h"
+#include "AALocalPlayerSubsystem.h"
 #include "FGCharacterPlayer.h"
 #include "FGInventoryComponent.h"
 #include "FGPlayerController.h"
@@ -27,7 +27,8 @@ void AAALoadBlueprint::Tick(float DeltaSeconds)
 		BlueprintPlacingComponent->GetAllPreviewHolograms(Holograms);
 		TArray<AActor*> HologramsActors(MoveTemp(Holograms));
 		FHitResult HitResult;
-		if(AAEquipment->RaycastMouseWithRange(HitResult, true, true, true, HologramsActors))
+		UAALocalPlayerSubsystem* AALocalPlayerSubsystem = GetWorld()->GetFirstLocalPlayerFromController()->GetSubsystem<UAALocalPlayerSubsystem>();
+		if(AALocalPlayerSubsystem->RaycastMouseWithRange(HitResult, true, true, true, HologramsActors))
 		{
 			if(AnchorIdx != INDEX_NONE)
 			{
@@ -46,6 +47,18 @@ void AAALoadBlueprint::Tick(float DeltaSeconds)
 	}
 }
 
+void AAALoadBlueprint::EnableInput(APlayerController* PlayerController)
+{
+	Super::EnableInput(PlayerController);
+	
+	InputComponent->BindAction("PrimaryFire", EInputEvent::IE_Pressed, this, &AAALoadBlueprint::PrimaryFire);
+	InputComponent->BindAction("SecondaryFire", EInputEvent::IE_Pressed, this, &AAALoadBlueprint::PrimaryFire);
+	ScrollUpInputActionBinding = &InputComponent->BindAction("BuildGunScrollUp_PhotoModeFOVUp", EInputEvent::IE_Pressed, this, &AAALoadBlueprint::ScrollUp);
+	ScrollDownInputActionBinding = &InputComponent->BindAction("BuildGunScrollDown_PhotoModeFOVDown", EInputEvent::IE_Pressed, this, &AAALoadBlueprint::ScrollDown);
+	ScrollUpInputActionBinding->bConsumeInput = false;
+	ScrollDownInputActionBinding->bConsumeInput = false;
+}
+
 void AAALoadBlueprint::PrimaryFire()
 {
 	if(bIsPickingAnchor)
@@ -54,7 +67,8 @@ void AAALoadBlueprint::PrimaryFire()
 		FHitResult HitResult;
 		TArray<AFGBuildableHologram*> PreviewHolograms;
 		BlueprintPlacingComponent->GetAllPreviewHolograms(PreviewHolograms);
-		if(AAEquipment->RaycastMouseWithRange(HitResult, true, true, true) && PreviewHolograms.Contains(HitResult.Actor))
+		UAALocalPlayerSubsystem* AALocalPlayerSubsystem = GetWorld()->GetFirstLocalPlayerFromController()->GetSubsystem<UAALocalPlayerSubsystem>();
+		if(AALocalPlayerSubsystem->RaycastMouseWithRange(HitResult, true, true, true) && PreviewHolograms.Contains(HitResult.Actor))
 		{
 			AnchorIdx = BlueprintPlacingComponent->GetHologramObjectIdx(static_cast<AFGBuildableHologram*>(HitResult.Actor.Get()));
 		}
@@ -69,7 +83,7 @@ void AAALoadBlueprint::PrimaryFire()
 		ScrollUpInputActionBinding->bConsumeInput = false;
 		ScrollDownInputActionBinding->bConsumeInput = false;
 	}
-	AAEquipment->OpenMainWidget();
+	LocalPlayerSubsystem->ToggleBuildMenu();
 }
 
 void AAALoadBlueprint::ScrollUp()
@@ -108,24 +122,6 @@ void AAALoadBlueprint::SetDeltaFromAnchorTransform(FTransform HologramTransform)
 	DeltaRotation = FRotator(FGenericPlatformMath::RoundToInt(DeltaRotation.Pitch), FGenericPlatformMath::RoundToInt(DeltaRotation.Yaw), FGenericPlatformMath::RoundToInt(DeltaRotation.Roll));
 }
 
-void AAALoadBlueprint::EquipmentEquipped(AAAEquipment* Equipment)
-{
-	Super::EquipmentEquipped(Equipment);
-	if(!InputComponent->HasBindings())
-	{
-		InputComponent->BindAction("PrimaryFire", EInputEvent::IE_Pressed, this, &AAALoadBlueprint::PrimaryFire);
-		InputComponent->BindAction("SecondaryFire", EInputEvent::IE_Pressed, this, &AAALoadBlueprint::PrimaryFire);
-		ScrollUpInputActionBinding = &InputComponent->BindAction("BuildGunScrollUp_PhotoModeFOVUp", EInputEvent::IE_Pressed, this, &AAALoadBlueprint::ScrollUp);
-		ScrollDownInputActionBinding = &InputComponent->BindAction("BuildGunScrollDown_PhotoModeFOVDown", EInputEvent::IE_Pressed, this, &AAALoadBlueprint::ScrollDown);
-		ScrollUpInputActionBinding->bConsumeInput = false;
-		ScrollDownInputActionBinding->bConsumeInput = false;
-	}
-}
-
-void AAALoadBlueprint::Run_Implementation() {
-	this->ShowSelectBlueprintWidget();
-}
-
 void AAALoadBlueprint::PathSelected(const FString BlueprintPath)
 {
 	Blueprint = GetGameInstance()->GetSubsystem<UAABlueprintSystem>()->LoadBlueprint(BlueprintPath);
@@ -150,52 +146,21 @@ void AAALoadBlueprint::Preview()
 	this->BlueprintPlacingComponent->MoveCopy(0, DeltaPosition, DeltaRotation, AnchorIdx != INDEX_NONE ? Blueprint->GetObjectTOC()[AnchorIdx].Transform.GetLocation() : BlueprintPlacingComponent->GetBuildingsCenter());
 }
 
-void AAALoadBlueprint::Finish()
+bool AAALoadBlueprint::Finish(const TArray<UFGInventoryComponent*>& Inventories, TArray<FInventoryStack>& MissingItems)
 {
 	this->Preview();
-	TArray<UFGInventoryComponent*> Inventories;
-	TArray<FInventoryStack> MissingItems;
-	AFGCharacterPlayer* Player = static_cast<AFGCharacterPlayer*>(this->AAEquipment->GetOwningController()->GetPawn());
-
-	for(TActorIterator<AFGBuildableStorage> StorageIt(GetWorld()); StorageIt; ++StorageIt)
-	{
-		if(FVector::Distance(StorageIt->GetActorLocation(), Player->GetActorLocation()) < 10000)
-		{
-			Inventories.Add(StorageIt->GetInitialStorageInventory());
-		}
-	}
-	
-	Inventories.Add(Player->GetInventory());
-	if(!this->BlueprintPlacingComponent->Finish(Inventories, MissingItems))
-	{
-		FString MissingItemsString = TEXT("");
-		for(const auto Stack : MissingItems)
-		{
-			MissingItemsString += FString::Printf(
-                TEXT("%s%d %s"), MissingItemsString.Len() != 0 ? TEXT(", ") : TEXT(""),
-                Stack.NumItems,
-                *UFGItemDescriptor::GetItemName(Stack.Item.ItemClass).ToString());
-		}
-		FOnMessageOk MessageOk;
-		MessageOk.BindDynamic(this, &AAALoadBlueprint::RemoveMissingItemsWidget);
-		const FText Message = FText::FromString(FString::Printf(TEXT("Missing items: %s"), *MissingItemsString));
-		MissingItemsWidget = this->AAEquipment->CreateActionMessageOk(Message, MessageOk);
-		this->AAEquipment->AddActionWidget(MissingItemsWidget);
-	}
-	else
-		this->Done();
+	return this->BlueprintPlacingComponent->Finish(Inventories, MissingItems);
 }
 
 void AAALoadBlueprint::RemoveMissingItemsWidget()
 {
-	this->AAEquipment->RemoveActionWidget(MissingItemsWidget);
 	MissingItemsWidget = nullptr;
 }
 
 void AAALoadBlueprint::EnterPickAnchor()
 {
 	bIsPickingAnchor = true;
-	AAEquipment->CloseMainWidget();
+	LocalPlayerSubsystem->ToggleBuildMenu();
 }
 
 void AAALoadBlueprint::EnterPlacing()
@@ -203,5 +168,5 @@ void AAALoadBlueprint::EnterPlacing()
 	ScrollUpInputActionBinding->bConsumeInput = true;
 	ScrollDownInputActionBinding->bConsumeInput = true;
 	bIsPlacing = true;
-	AAEquipment->CloseMainWidget();
+	LocalPlayerSubsystem->ToggleBuildMenu();
 }

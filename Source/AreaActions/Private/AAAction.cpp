@@ -1,7 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "AAAction.h"
-#include "AAEquipment.h"
+
+#include "AALocalPlayerSubsystem.h"
 #include "FGPlayerController.h"
 
 void AAAAction::Run_Implementation() {
@@ -16,17 +17,6 @@ void AAAAction::Cancel()
 {
 	this->OnCancel();
 	this->Done();
-}
-
-void AAAAction::EquipmentEquipped(AAAEquipment* Equipment)
-{
-	this->SetAAEquipment(Equipment);
-	EnableInput(AAEquipment->GetOwningController());
-}
-
-void AAAAction::EquipmentUnEquipped()
-{
-	DisableInput(AAEquipment->GetOwningController());
 }
 
 FText AAAAction::GetActionName(const TSubclassOf<AAAAction> InClass)
@@ -47,9 +37,9 @@ TSubclassOf<UAAActionCategory> AAAAction::GetActionCategory(const TSubclassOf<AA
 	return InClass.GetDefaultObject()->Category;
 }
 
-FSlateBrush AAAAction::GetActionIcon(const TSubclassOf<AAAAction> InClass)
+UTexture2D* AAAAction::GetActionIcon(const TSubclassOf<AAAAction> InClass)
 {
-	if(!InClass) return FSlateBrush();
+	if(!InClass) return nullptr;
 	return InClass.GetDefaultObject()->Icon;
 }
 

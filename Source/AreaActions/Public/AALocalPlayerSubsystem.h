@@ -6,6 +6,7 @@
 #include "AAHeightIndicator.h"
 #include "AAAction.h"
 #include "CoreMinimal.h"
+#include "Equipment/FGBuildGun.h"
 #include "UI/FGInteractWidget.h"
 
 #include "AALocalPlayerSubsystem.generated.h"
@@ -19,8 +20,10 @@ class AREAACTIONS_API UAALocalPlayerSubsystem : public ULocalPlayerSubsystem
 public:
 	UAALocalPlayerSubsystem();
 
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+
 	UFUNCTION(BlueprintCallable)
-	bool RunAction(TSubclassOf<AAAAction> ActionClass, AAAEquipment* Equipment, FText& Error);
+	bool RunAction(TSubclassOf<AAAAction> ActionClass, FText& Error);
 
 	void ActionDone();
 protected:
@@ -29,24 +32,38 @@ protected:
 
 	void DelayedUpdateExtraActors();
 
+	UFUNCTION()
+	void OnBuildGunStateChanged(EBuildGunState NewState);
+
 public:
 	void AddCorner(FVector2D Location);
 	void RemoveCorner(int CornerIdx);
 	void UpdateHeight();
 
+	UFUNCTION(BlueprintCallable)
+	void SelectMap();
+
+	UFUNCTION(BlueprintCallable)
+	void ClearSelection();
+
+	bool RaycastMouseWithRange(FHitResult & OutHitResult, bool bIgnoreCornerIndicators = false, bool bIgnoreWallIndicators = false, bool bIgnoreHeightIndicators = false, TArray<AActor*> OtherIgnoredActors = TArray<AActor*>()) const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure=false, meta=(DisplayName = "RaycastMouseWithRange", AutoCreateRefTerm = "OtherIgnoredActors"))
+	FORCEINLINE bool K2_RaycastMouseWithRange(FHitResult & OutHitResult, bool bIgnoreCornerIndicators, bool bIgnoreWallIndicators, bool bIgnoreHeightIndicators, TArray<AActor*> OtherIgnoredActors) const
+	{
+		return RaycastMouseWithRange(OutHitResult, bIgnoreCornerIndicators, bIgnoreWallIndicators, bIgnoreHeightIndicators, OtherIgnoredActors);
+	}
+
 	AAACornerIndicator* CreateCornerIndicator(FVector2D Location) const;
 	AAAWallIndicator* CreateWallIndicator(FVector2D From, FVector2D To) const;
 
 	void GetAllActorsInArea(TArray<AActor*>& OutActors);
-
-	UPROPERTY(BlueprintAssignable)
-	FOnActionDone OnActionDone;
 	
 	UPROPERTY(BlueprintReadOnly)
 	AAAAction* CurrentAction;
-	
-	UPROPERTY(BlueprintReadOnly)
-	TArray<UWidget*> ActionWidgets;
+
+	UFUNCTION(BlueprintCallable)
+	void ToggleBuildMenu();
 
 private:
 	UPROPERTY()
@@ -67,6 +84,8 @@ private:
 
 	UPROPERTY()
 	AAAHeightIndicator* BottomIndicator;
+
+	friend class AAASelectionActor;
 public:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AAACornerIndicator> CornerIndicatorClass;
@@ -89,6 +108,7 @@ private:
 	
 	UPROPERTY(EditDefaultsOnly)
 	FText ConflictingActionRunningMessage = FText::FromString(TEXT("Another action is already running!"));
-
-	friend class AAAEquipment;
+	
+	UPROPERTY(EditDefaultsOnly)
+	float MaxRaycastDistance = 50000;
 };

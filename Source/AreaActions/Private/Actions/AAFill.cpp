@@ -1,11 +1,11 @@
 ﻿#include "Actions/AAFill.h"
 
-#include "AAEquipment.h"
+#include "AALocalPlayerSubsystem.h"
 #include "FGOutlineComponent.h"
 #include "FGPlayerController.h"
 #include "Buildables/FGBuildableStorage.h"
 
-AAAFill::AAAFill() {
+AAAFill::AAAFill() : Super() {
     this->CopyBuildingsComponent = CreateDefaultSubobject<UAACopyBuildingsComponent>(TEXT("CopyBuildings"));
 
 	PrimaryActorTick.bCanEverTick = true;
@@ -20,7 +20,8 @@ void AAAFill::Tick(float DeltaSeconds)
 		CopyBuildingsComponent->GetAllPreviewHolograms(Holograms);
 		TArray<AActor*> HologramsActors(MoveTemp(Holograms));
 		FHitResult HitResult;
-		if(AAEquipment->RaycastMouseWithRange(HitResult, true, true, true, HologramsActors))
+		UAALocalPlayerSubsystem* AALocalPlayerSubsystem = GetWorld()->GetFirstLocalPlayerFromController()->GetSubsystem<UAALocalPlayerSubsystem>();
+		if(AALocalPlayerSubsystem->RaycastMouseWithRange(HitResult, true, true, true, HologramsActors))
 		{
 			FVector Location = CopyBuildingsComponent->GetBounds().Rotation.UnrotateVector(HitResult.Location - CopyBuildingsComponent->GetBounds().Center);
 			FVector CopyOffset = CopyBuildingsComponent->GetBounds().Extents * 2 + Border;
@@ -49,6 +50,18 @@ void AAAFill::Tick(float DeltaSeconds)
 	}
 }
 
+void AAAFill::EnableInput(APlayerController* PlayerController)
+{
+	Super::EnableInput(PlayerController);
+	
+	InputComponent->BindAction("PrimaryFire", EInputEvent::IE_Pressed, this, &AAAFill::PrimaryFire);
+	InputComponent->BindAction("SecondaryFire", EInputEvent::IE_Pressed, this, &AAAFill::PrimaryFire);
+	ScrollUpInputActionBinding = &InputComponent->BindAction("BuildGunScrollUp_PhotoModeFOVUp", EInputEvent::IE_Pressed, this, &AAAFill::ScrollUp);
+	ScrollDownInputActionBinding = &InputComponent->BindAction("BuildGunScrollDown_PhotoModeFOVDown", EInputEvent::IE_Pressed, this, &AAAFill::ScrollDown);
+	ScrollUpInputActionBinding->bConsumeInput = false;
+	ScrollDownInputActionBinding->bConsumeInput = false;
+}
+
 void AAAFill::PrimaryFire()
 {
 	if(bIsPlacing)
@@ -57,7 +70,7 @@ void AAAFill::PrimaryFire()
 		ScrollUpInputActionBinding->bConsumeInput = false;
 		ScrollDownInputActionBinding->bConsumeInput = false;
 	}
-	AAEquipment->OpenMainWidget();
+	LocalPlayerSubsystem->ToggleBuildMenu();
 }
 
 void AAAFill::ScrollUp()
@@ -96,51 +109,6 @@ void AAAFill::ScrollDown()
 		FillDirection = EFillDirection::XYZ; 
 		break;
 	}
-}
-
-void AAAFill::EquipmentEquipped(AAAEquipment* Equipment)
-{
-    Super::EquipmentEquipped(Equipment);
-    if(!InputComponent->HasBindings())
-    {
-        InputComponent->BindAction("PrimaryFire", EInputEvent::IE_Pressed, this, &AAAFill::PrimaryFire);
-        InputComponent->BindAction("SecondaryFire", EInputEvent::IE_Pressed, this, &AAAFill::PrimaryFire);
-        ScrollUpInputActionBinding = &InputComponent->BindAction("BuildGunScrollUp_PhotoModeFOVUp", EInputEvent::IE_Pressed, this, &AAAFill::ScrollUp);
-        ScrollDownInputActionBinding = &InputComponent->BindAction("BuildGunScrollDown_PhotoModeFOVDown", EInputEvent::IE_Pressed, this, &AAAFill::ScrollDown);
-        ScrollUpInputActionBinding->bConsumeInput = false;
-        ScrollDownInputActionBinding->bConsumeInput = false;
-    }
-}
-
-void AAAFill::Run_Implementation() {
-    TArray<AFGBuildable*> BuildingsWithIssues;
-    FText Error;
-    if (!this->CopyBuildingsComponent->SetActors(this->Actors, BuildingsWithIssues, Error)) {
-        if(!Error.IsEmpty())
-        {
-            FOnMessageOk MessageOk;
-            MessageOk.BindDynamic(this, &AAAFill::Done);
-            UWidget* MessageOkWidget = this->AAEquipment->CreateActionMessageOk(Error, MessageOk);
-            this->AAEquipment->AddActionWidget(MessageOkWidget);
-        }
-        else
-        {
-            TArray<AActor*> AsActors;
-            for (AFGBuildable* Building : BuildingsWithIssues) {
-                AsActors.Add(Building);
-            }
-            UFGOutlineComponent::Get(GetWorld())->ShowDismantlePendingMaterial(AsActors);
-            FOnMessageOk MessageOk;
-            MessageOk.BindDynamic(this, &AAAFill::Done);
-            const FText Message = FText::FromString(TEXT("Some buildings cannot be copied because they have connections to buildings outside the selected area. Remove the connections temporary, or include the connected buildings in the area. The buildings are highlighted."));
-            UWidget* MessageOkWidget = this->AAEquipment->CreateActionMessageOk(Message, MessageOk);
-            this->AAEquipment->AddActionWidget(MessageOkWidget);
-        }
-    }
-    else {
-        this->AreaSize = this->CopyBuildingsComponent->GetBounds().Extents * 2;
-        this->ShowFillWidget();
-    }
 }
 
 void AAAFill::OnCancel_Implementation()
@@ -184,45 +152,15 @@ void AAAFill::Preview()
     }
 }
 
-void AAAFill::Finish()
-{
-    this->Preview();
-    TArray<UFGInventoryComponent*> Inventories;
-    TArray<FInventoryStack> MissingItems;
-    AFGCharacterPlayer* Player = static_cast<AFGCharacterPlayer*>(this->AAEquipment->GetOwningController()->GetPawn());
 
-    for(TActorIterator<AFGBuildableStorage> StorageIt(GetWorld()); StorageIt; ++StorageIt)
-    {
-        if(FVector::Distance(StorageIt->GetActorLocation(), Player->GetActorLocation()) < 10000)
-        {
-            Inventories.Add(StorageIt->GetInitialStorageInventory());
-        }
-    }
-	
-    Inventories.Add(Player->GetInventory());
-    if(!this->CopyBuildingsComponent->Finish(Inventories, MissingItems))
-    {
-        FString MissingItemsString = TEXT("");
-        for(const auto Stack : MissingItems)
-        {
-            MissingItemsString += FString::Printf(
-                TEXT("%s%d %s"), MissingItemsString.Len() != 0 ? TEXT(", ") : TEXT(""),
-                Stack.NumItems,
-                *UFGItemDescriptor::GetItemName(Stack.Item.ItemClass).ToString());
-        }
-        FOnMessageOk MessageOk;
-        MessageOk.BindDynamic(this, &AAAFill::RemoveMissingItemsWidget);
-        const FText Message = FText::FromString(FString::Printf(TEXT("Missing items: %s"), *MissingItemsString));
-        MissingItemsWidget = this->AAEquipment->CreateActionMessageOk(Message, MessageOk);
-        this->AAEquipment->AddActionWidget(MissingItemsWidget);
-    }
-    else
-        this->Done();
+bool AAAFill::Finish(const TArray<UFGInventoryComponent*>& Inventories, TArray<FInventoryStack>& MissingItems)
+{
+	this->Preview();
+	return this->CopyBuildingsComponent->Finish(Inventories, MissingItems);
 }
 
 void AAAFill::RemoveMissingItemsWidget()
 {
-    this->AAEquipment->RemoveActionWidget(MissingItemsWidget);
     MissingItemsWidget = nullptr;
 }
 
@@ -231,7 +169,7 @@ void AAAFill::EnterPlacing()
 	ScrollUpInputActionBinding->bConsumeInput = true;
 	ScrollDownInputActionBinding->bConsumeInput = true;
 	bIsPlacing = true;
-	AAEquipment->CloseMainWidget();
+	LocalPlayerSubsystem->ToggleBuildMenu();
 }
 
 FFillAxis FFillAxis::None = FFillAxis();

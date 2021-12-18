@@ -24,18 +24,9 @@ public class AreaActions : ModuleRules
             "Slate", "SlateCore"
 		});
         
-        PublicDependencyModuleNames.AddRange(new string[] {"FactoryGame", "SML"});
-
-        var processStartInfo = new ProcessStartInfo("git", "diff --quiet")
-        {
-	        UseShellExecute = false,
-	        WorkingDirectory = Target.ProjectFile.Directory.FullName,
-        };
-        var gitDiffQuiet = Process.Start(processStartInfo);
-        gitDiffQuiet.WaitForExit();
-        var gitDirty = gitDiffQuiet.ExitCode == 1;
-        Console.Out.WriteLine("Area Actions plugin is {0}", gitDirty ? "dirty" : "clean");
-
-        PublicDefinitions.Add(gitDirty ? "AA_DEBUG=0" : "AA_DEBUG=0");
+        PublicDependencyModuleNames.AddRange(new string[] {
+	        "FactoryGame",
+	        "SML"
+        });
     }
 }

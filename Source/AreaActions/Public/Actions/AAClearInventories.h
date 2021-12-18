@@ -17,11 +17,9 @@ class AREAACTIONS_API AAAClearInventories : public AAAAction
 {
 	GENERATED_BODY()
 
-public:
-	virtual void Run_Implementation() override;
-	
-	UFUNCTION()
-	void ClearInventories();
+public:	
+	UFUNCTION(BlueprintCallable)
+	int32 ClearInventories();
 	
 protected:
 	UPROPERTY()

@@ -4,6 +4,7 @@
 
 #include "AAActionCategory.h"
 #include "CoreMinimal.h"
+#include "Blueprint/UserWidget.h"
 #include "Styling/SlateBrush.h"
 #include "GameFramework/Actor.h"
 #include "AAAction.generated.h"
@@ -25,12 +26,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void Cancel();
 
-	virtual void EquipmentEquipped(class AAAEquipment* Equipment);
-
-	virtual void EquipmentUnEquipped();
-
 	FORCEINLINE void SetActors(const TArray<AActor*> InActors) { this->Actors = InActors; }
-	FORCEINLINE void SetAAEquipment(class AAAEquipment* InEquipment) { this->AAEquipment = InEquipment; }
 	FORCEINLINE void SetSubsystem(class UAALocalPlayerSubsystem* InSubsystem) { this->LocalPlayerSubsystem = InSubsystem; }
 
 	UFUNCTION(BlueprintPure, Category = "Action")
@@ -43,17 +39,17 @@ public:
 	static TSubclassOf<UAAActionCategory> GetActionCategory(TSubclassOf<AAAAction> InClass);
 
 	UFUNCTION(BlueprintPure, Category = "Action")
-    static FSlateBrush GetActionIcon(TSubclassOf<AAAAction> InClass);
+	static UTexture2D* GetActionIcon(TSubclassOf<AAAAction> InClass);
 	
 protected:
-	UPROPERTY(BlueprintReadOnly)
-	class AAAEquipment* AAEquipment;
-
 	UPROPERTY(BlueprintReadOnly)
 	class UAALocalPlayerSubsystem* LocalPlayerSubsystem;
 
 	UPROPERTY(BlueprintReadOnly)
 	TArray<AActor*> Actors;
+
+	UPROPERTY(BlueprintReadWrite)
+	UUserWidget* ActionWidget;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Action")
@@ -63,7 +59,7 @@ protected:
 	FText Description;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Action")
-	FSlateBrush Icon;
+	UTexture2D* Icon;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Action")
 	TSubclassOf<UAAActionCategory> Category;

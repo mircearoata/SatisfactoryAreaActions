@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "FGHotbarShortcut.h"
+#include "FGPlayerState.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "AABlueprintFunctionLibrary.generated.h"
 
@@ -19,4 +21,7 @@ class AREAACTIONS_API UAABlueprintFunctionLibrary : public UBlueprintFunctionLib
 	
 	UFUNCTION(BlueprintCallable, Category="AreaActions|Hologram")
 	static FTransform GetHologramScroll(class AFGHologram* Hologram, int32 Delta);
+
+	UFUNCTION(BlueprintCallable, Category="AreaActions|Hotbar")
+	static UFGHotbarShortcut* CreateHotbarShortcut(AFGPlayerState* PlayerState, TSubclassOf<UFGHotbarShortcut> HotbarShortcutClass, int32 Index);
 };

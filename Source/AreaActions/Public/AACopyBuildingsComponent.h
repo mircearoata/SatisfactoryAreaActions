@@ -87,9 +87,11 @@ class AREAACTIONS_API UAACopyBuildingsComponent : public UActorComponent
 public:
 	UAACopyBuildingsComponent();
 
-	bool SetActors(TArray<AActor*>& Actors, TArray<AFGBuildable*>& OutBuildingsWithIssues, FText& Error);
-	bool SetBuildings(TArray<AFGBuildable*>& Buildings, TArray<AFGBuildable*>& OutBuildingsWithIssues, FText& Error);
-	bool ValidateObjects(TArray<AFGBuildable*>& OutBuildingsWithIssues);
+	UFUNCTION(BlueprintCallable)
+	bool SetActors(UPARAM(ref) const TArray<AActor*>& Actors, TArray<AFGBuildable*>& OutBuildingsWithIssues, FText& Error);
+
+	UFUNCTION(BlueprintCallable)
+	bool SetBuildings(UPARAM(ref) const TArray<AFGBuildable*>& Buildings, TArray<AFGBuildable*>& OutBuildingsWithIssues, FText& Error);
 
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE FVector GetBuildingsCenter() const { return BuildingsBounds.Center; }
@@ -97,13 +99,21 @@ public:
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE FAARotatedBoundingBox GetBounds() const { return BuildingsBounds; }
 
+	UFUNCTION(BlueprintCallable)
 	int AddCopy(FVector Offset, FRotator Rotation, FVector RotationCenter, bool Relative = true);
+
 	FORCEINLINE int AddCopy(const FVector Offset, const FRotator Rotation, const bool Relative = true) { return this->AddCopy(Offset, Rotation, GetBuildingsCenter(), Relative); }
+
+	UFUNCTION(BlueprintCallable)
 	void MoveCopy(int CopyId, FVector Offset, FRotator Rotation, FVector RotationCenter, bool Relative = true);
+
 	FORCEINLINE void MoveCopy(const int CopyId, const FVector Offset, const FRotator Rotation, const bool Relative = true) { this->MoveCopy(CopyId, Offset, Rotation, GetBuildingsCenter(), Relative); }
+
+	UFUNCTION(BlueprintCallable)
 	void RemoveCopy(int CopyId);
 
-	bool Finish(TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems);
+	UFUNCTION(BlueprintCallable)
+	bool Finish(const TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems);
 
 	UFUNCTION(BlueprintCallable)
 	AFGBuildableHologram* GetPreviewHologram(int CopyId, AFGBuildable* Buildable);
@@ -115,6 +125,8 @@ public:
 	void GetBuildingHolograms(int CopyId, TMap<AFGBuildable*, AFGBuildableHologram*>& OutPreviewHolograms);
 
 private:
+	bool ValidateObjects(TArray<AFGBuildable*>& OutBuildingsWithIssues);
+	
 	FTransform TransformAroundPoint(FTransform OriginalTransform, FVector Offset, FRotator Rotation, FVector RotationCenter);
 	
 	void FixReferencesForCopy(const FCopyMap& Copy);
@@ -122,8 +134,8 @@ private:
 	void CalculateBounds();
 	void SerializeOriginal();
 	
-	bool TryTakeItems(TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems);
-	bool CheckItems(TMap<TSubclassOf<UFGItemDescriptor>, int32> RemainingItems, TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems, const bool TakeItems = false) const;
+	bool TryTakeItems(const TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems);
+	bool CheckItems(TMap<TSubclassOf<UFGItemDescriptor>, int32> RemainingItems, const TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems, const bool TakeItems = false) const;
 	
 private:
 	int32 CurrentId;

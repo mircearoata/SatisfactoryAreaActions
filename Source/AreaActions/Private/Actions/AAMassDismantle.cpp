@@ -3,24 +3,13 @@
 #include "Actions/AAMassDismantle.h"
 
 #include "Buildables/FGBuildable.h"
-#include "AAEquipment.h"
+#include "AALocalPlayerSubsystem.h"
 #include "FGCharacterPlayer.h"
 #include "FGInventoryLibrary.h"
 
-void AAAMassDismantle::Run_Implementation()
-{
-    FOnMessageYes MessageYes;
-    MessageYes.BindDynamic(this, &AAAMassDismantle::Dismantle);
-    FOnMessageNo MessageNo;
-    MessageNo.BindDynamic(this, &AAAMassDismantle::Done);
-    const FText Message = FText::FromString(FString::Printf(TEXT("Are you sure you want to dismantle %d buildings?\nThe game will freeze for a while."), Actors.Num()));
-    ConfirmWidget = this->AAEquipment->CreateActionMessageYesNo(Message, MessageYes, MessageNo);
-    this->AAEquipment->AddActionWidget(ConfirmWidget);
-}
 
 void AAAMassDismantle::Dismantle()
 {
-    this->AAEquipment->RemoveActionWidget(ConfirmWidget);
     for (AActor* Actor : this->Actors)
     {
         TArray<FInventoryStack> BuildingRefunds;
@@ -31,37 +20,16 @@ void AAAMassDismantle::Dismantle()
     }
     UFGInventoryLibrary::ConsolidateInventoryItems(this->Refunds);
 
-    int32 ItemCount = 0;
-    for(const FInventoryStack Stack : this->Refunds)
-        ItemCount += Stack.NumItems;
-
-    if(ItemCount > 0)
-    {
-        FOnMessageYes MessageYes;
-        MessageYes.BindDynamic(this, &AAAMassDismantle::GiveRefunds);
-        FOnMessageNo MessageNo;
-        MessageNo.BindDynamic(this, &AAAMassDismantle::Done);
-        const FText Message = FText::FromString(FString::Printf(TEXT("Do you want to receive the refunds (%d items) in a crate near you?"), ItemCount));
-        RefundsWidget = this->AAEquipment->CreateActionMessageYesNo(Message, MessageYes, MessageNo);
-        this->AAEquipment->AddActionWidget(RefundsWidget);
-    }
-    else
-    {
-        FOnMessageOk MessageOk;
-        MessageOk.BindDynamic(this, &AAAMassDismantle::Done);
-        const FText Message = FText::FromString(TEXT("No refunds are available."));
-        RefundsWidget = this->AAEquipment->CreateActionMessageOk(Message, MessageOk);
-        this->AAEquipment->AddActionWidget(RefundsWidget);
-    }
+    ShowGiveRefundsWidget();
 }
 
 void AAAMassDismantle::GiveRefunds()
 {
-    this->AAEquipment->RemoveActionWidget(RefundsWidget);
+	AFGCharacterPlayer* Player = static_cast<AFGCharacterPlayer*>(this->LocalPlayerSubsystem->GetLocalPlayer<>()->GetPlayerController(GetWorld())->GetPawn());
     AFGCrate* Crate = GetWorld()->SpawnActor<AFGCrate>(
         CrateClass,
-        this->AAEquipment->GetInstigatorCharacter()->GetActorLocation() + this->AAEquipment->GetInstigatorCharacter()->GetActorForwardVector() * CrateDistance,
-        FRotator(0, this->AAEquipment->GetInstigatorCharacter()->GetActorRotation().Yaw + 90, 0));
+        Player->GetActorLocation() + Player->GetActorForwardVector() * CrateDistance,
+        FRotator(0, Player->GetActorRotation().Yaw + 90, 0));
 
     int CrateInventorySlots = 0;
     for (FInventoryStack& Stack : this->Refunds)
@@ -71,6 +39,6 @@ void AAAMassDismantle::GiveRefunds()
     }
     Crate->GetInventory()->Resize(CrateInventorySlots);
     Crate->GetInventory()->AddStacks(this->Refunds);
-    this->AAEquipment->ClearSelection();
+    this->LocalPlayerSubsystem->ClearSelection();
     this->Done();
 }
