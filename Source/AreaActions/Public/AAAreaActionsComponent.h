@@ -1,26 +1,26 @@
 ﻿#pragma once
 
-#include "Subsystems/LocalPlayerSubsystem.h"
 #include "AACornerIndicator.h"
 #include "AAWallIndicator.h"
 #include "AAHeightIndicator.h"
 #include "AAAction.h"
 #include "CoreMinimal.h"
+#include "FGPlayerController.h"
 #include "Equipment/FGBuildGun.h"
-#include "UI/FGInteractWidget.h"
 
-#include "AALocalPlayerSubsystem.generated.h"
+#include "AAAreaActionsComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnActionDone);
 
-UCLASS()
-class AREAACTIONS_API UAALocalPlayerSubsystem : public ULocalPlayerSubsystem
+UCLASS(Within=FGBuildGun)
+class AREAACTIONS_API UAAAreaActionsComponent : public UActorComponent
 {
 	GENERATED_BODY()
 public:
-	UAALocalPlayerSubsystem();
+	UAAAreaActionsComponent();
 
-	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	UFUNCTION(BlueprintCallable)
 	bool RunAction(TSubclassOf<AAAAction> ActionClass, FText& Error);
@@ -65,6 +65,17 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ToggleBuildMenu();
 
+	UFUNCTION(BlueprintCallable)
+	void HideBuildMenu();
+
+	UFUNCTION(BlueprintCallable)
+	void ShowBuildMenu();
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE AFGPlayerController* GetPlayerController() const { return static_cast<AFGPlayerController*>(GetPlayerCharacter()->GetController()); }
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE AFGCharacterPlayer* GetPlayerCharacter() const { return static_cast<AFGCharacterPlayer*>(GetOuterAFGBuildGun()->GetOwner()); }
 private:
 	UPROPERTY()
 	TArray<AActor*> ExtraActors;
@@ -85,6 +96,8 @@ private:
 	UPROPERTY()
 	AAAHeightIndicator* BottomIndicator;
 
+	UPROPERTY()
+	class AAASelectionActor* SelectionActor;
 	friend class AAASelectionActor;
 public:
 	UPROPERTY(EditDefaultsOnly)

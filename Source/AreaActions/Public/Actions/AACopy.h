@@ -23,6 +23,7 @@ public:
 	virtual void OnCancel_Implementation() override;
 
 	void PrimaryFire();
+	void OpenMenu();
 	void ScrollUp();
 	void ScrollDown();
 
@@ -59,7 +60,13 @@ public:
 	void Preview();
 	
 	UFUNCTION(BlueprintCallable)
-    bool Finish(const TArray<UFGInventoryComponent*>& Inventories, TArray<FInventoryStack>& MissingItems);
+	bool Finish();
+	
+	UFUNCTION(BlueprintPure)
+	bool CanFinish() const;
+	
+	UFUNCTION(BlueprintImplementableEvent, BlueprintPure)
+	TArray<UFGInventoryComponent*> GetInventories() const;
 
 	UFUNCTION()
 	void RemoveMissingItemsWidget();

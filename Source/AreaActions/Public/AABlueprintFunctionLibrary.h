@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AAAreaActionsComponent.h"
 #include "FGHotbarShortcut.h"
 #include "FGPlayerState.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
@@ -24,4 +25,13 @@ class AREAACTIONS_API UAABlueprintFunctionLibrary : public UBlueprintFunctionLib
 
 	UFUNCTION(BlueprintCallable, Category="AreaActions|Hotbar")
 	static UFGHotbarShortcut* CreateHotbarShortcut(AFGPlayerState* PlayerState, TSubclassOf<UFGHotbarShortcut> HotbarShortcutClass, int32 Index);
+
+	UFUNCTION(BlueprintPure, Category="AreaActions")
+	static UAAAreaActionsComponent* GetAreaActionsComponent(AFGCharacterPlayer* PlayerCharacter);
+
+	UFUNCTION(BlueprintPure, Category="AreaActions")
+	static bool InventoriesHaveEnoughItems(const TArray<UFGInventoryComponent*>& Inventories, const TMap<TSubclassOf<UFGItemDescriptor>, int32>& Items, TMap<TSubclassOf<UFGItemDescriptor>, int32>& MissingItems);
+
+	UFUNCTION(BlueprintPure, Category="AreaActions")
+	static bool TakeItemsFromInventories(const TArray<UFGInventoryComponent*>& Inventories, const TMap<TSubclassOf<UFGItemDescriptor>, int32>& Items, TMap<TSubclassOf<UFGItemDescriptor>, int32>& MissingItems);
 };

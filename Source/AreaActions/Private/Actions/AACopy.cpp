@@ -3,7 +3,7 @@
 #include "Actions/AACopy.h"
 
 #include "AABlueprintFunctionLibrary.h"
-#include "AALocalPlayerSubsystem.h"
+#include "AAAreaActionsComponent.h"
 #include "FGOutlineComponent.h"
 #include "FGPlayerController.h"
 #include "Buildables/FGBuildableStorage.h"
@@ -25,8 +25,7 @@ void AAACopy::Tick(float DeltaSeconds)
 		CopyBuildingsComponent->GetAllPreviewHolograms(Holograms);
 		TArray<AActor*> HologramsActors(MoveTemp(Holograms));
 		FHitResult HitResult;
-		UAALocalPlayerSubsystem* AALocalPlayerSubsystem = GetWorld()->GetFirstLocalPlayerFromController()->GetSubsystem<UAALocalPlayerSubsystem>();
-		if(AALocalPlayerSubsystem->RaycastMouseWithRange(HitResult, true, true, true, HologramsActors))
+		if(AreaActionsComponent->RaycastMouseWithRange(HitResult, true, true, true, HologramsActors))
 		{
 			if(Anchor)
 			{
@@ -51,6 +50,7 @@ void AAACopy::EnableInput(APlayerController* PlayerController)
 
 	InputComponent->BindAction("PrimaryFire", EInputEvent::IE_Pressed, this, &AAACopy::PrimaryFire);
 	InputComponent->BindAction("SecondaryFire", EInputEvent::IE_Pressed, this, &AAACopy::PrimaryFire);
+	InputComponent->BindAction("Inventory", EInputEvent::IE_Pressed, this, &AAACopy::OpenMenu); // TODO Temporary
 	ScrollUpInputActionBinding = &InputComponent->BindAction("BuildGunScrollUp_PhotoModeFOVUp", EInputEvent::IE_Pressed, this, &AAACopy::ScrollUp);
 	ScrollDownInputActionBinding = &InputComponent->BindAction("BuildGunScrollDown_PhotoModeFOVDown", EInputEvent::IE_Pressed, this, &AAACopy::ScrollDown);
 	ScrollUpInputActionBinding->bConsumeInput = false;
@@ -65,8 +65,7 @@ void AAACopy::PrimaryFire()
 		FHitResult HitResult;
 		TMap<AFGBuildable*, AFGBuildableHologram*> PreviewHolograms;
 		CopyBuildingsComponent->GetBuildingHolograms(0, PreviewHolograms);
-		UAALocalPlayerSubsystem* AALocalPlayerSubsystem = GetWorld()->GetFirstLocalPlayerFromController()->GetSubsystem<UAALocalPlayerSubsystem>();
-		if(AALocalPlayerSubsystem->RaycastMouseWithRange(HitResult, true, true, true))
+		if(AreaActionsComponent->RaycastMouseWithRange(HitResult, true, true, true))
 		{
 			if(Actors.Contains(HitResult.Actor))
 			{
@@ -81,14 +80,27 @@ void AAACopy::PrimaryFire()
 		{
 			Anchor = nullptr;
 		}
+		bIsPlacing = true;
 	}
 	else if(bIsPlacing)
 	{
-		bIsPlacing = false;
-		ScrollUpInputActionBinding->bConsumeInput = false;
-		ScrollDownInputActionBinding->bConsumeInput = false;
+		if(Finish())
+		{
+			bIsPlacing = false;
+			ScrollUpInputActionBinding->bConsumeInput = false;
+			ScrollDownInputActionBinding->bConsumeInput = false;
+			Done();
+		}
 	}
-	LocalPlayerSubsystem->ToggleBuildMenu();
+}
+
+void AAACopy::OpenMenu()
+{
+	bIsPickingAnchor = false;
+	bIsPlacing = false;
+	ScrollUpInputActionBinding->bConsumeInput = false;
+	ScrollDownInputActionBinding->bConsumeInput = false;
+	AreaActionsComponent->ShowBuildMenu();
 }
 
 void AAACopy::ScrollUp()
@@ -137,10 +149,20 @@ void AAACopy::Preview()
 	this->CopyBuildingsComponent->MoveCopy(0, DeltaPosition, DeltaRotation, Anchor ? Anchor->GetActorLocation() : CopyBuildingsComponent->GetBuildingsCenter());
 }
 
-bool AAACopy::Finish(const TArray<UFGInventoryComponent*>& Inventories, TArray<FInventoryStack>& MissingItems)
+bool AAACopy::Finish()
 {
+	if(!CanFinish())
+		return false;
 	this->Preview();
-	return this->CopyBuildingsComponent->Finish(Inventories, MissingItems);
+	TMap<TSubclassOf<UFGItemDescriptor>, int32> MissingItemsMap;
+	const bool ReturnValue = this->CopyBuildingsComponent->Finish(GetInventories(), MissingItemsMap);
+	return ReturnValue; 
+}
+
+bool AAACopy::CanFinish() const
+{
+	TMap<TSubclassOf<UFGItemDescriptor>, int32> MissingItemsMap;
+	return UAABlueprintFunctionLibrary::InventoriesHaveEnoughItems(GetInventories(), CopyBuildingsComponent->GetRequiredItems(), MissingItemsMap);
 }
 
 void AAACopy::RemoveMissingItemsWidget()
@@ -151,7 +173,7 @@ void AAACopy::RemoveMissingItemsWidget()
 void AAACopy::EnterPickAnchor()
 {
 	bIsPickingAnchor = true;
-	LocalPlayerSubsystem->ToggleBuildMenu();
+	AreaActionsComponent->HideBuildMenu();
 }
 
 void AAACopy::EnterPlacing()
@@ -159,5 +181,5 @@ void AAACopy::EnterPlacing()
 	ScrollUpInputActionBinding->bConsumeInput = true;
 	ScrollDownInputActionBinding->bConsumeInput = true;
 	bIsPlacing = true;
-	LocalPlayerSubsystem->ToggleBuildMenu();
+	AreaActionsComponent->HideBuildMenu();
 }

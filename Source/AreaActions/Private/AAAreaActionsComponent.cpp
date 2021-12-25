@@ -1,5 +1,7 @@
-﻿#include "AALocalPlayerSubsystem.h"
+﻿#include "AAAreaActionsComponent.h"
 
+#include "AASelectionActor.h"
+#include "Equipment/FGBuildGun.h"
 #include "FGLocalPlayer.h"
 #include "Buildables/FGBuildable.h"
 #include "FGOutlineComponent.h"
@@ -8,7 +10,7 @@
 #include "GenericPlatform/GenericPlatformMath.h"
 #include "UI/FGGameUI.h"
 
-UAALocalPlayerSubsystem::UAALocalPlayerSubsystem() : Super() {
+UAAAreaActionsComponent::UAAAreaActionsComponent() : Super() {
 	this->AreaMinZ = MinZ;
 	this->AreaMaxZ = MaxZ;
 	this->CornerIndicatorClass = FSoftClassPath(TEXT("/AreaActions/Indicators/Corner/CornerIndicator.CornerIndicator_C")).TryLoadClass<AAACornerIndicator>();
@@ -16,22 +18,46 @@ UAALocalPlayerSubsystem::UAALocalPlayerSubsystem() : Super() {
 	this->HeightIndicatorClass = FSoftClassPath(TEXT("/AreaActions/Indicators/Height/HeightIndicator.HeightIndicator_C")).TryLoadClass<AAAHeightIndicator>();
 }
 
-void UAALocalPlayerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+void UAAAreaActionsComponent::BeginPlay()
 {
-	Super::Initialize(Collection);
-	if(const ULocalPlayer* LocalPlayer = GetLocalPlayer<UFGLocalPlayer>())
+	Super::BeginPlay();
+	GetOuterAFGBuildGun()->mOnStateChanged.AddDynamic(this, &UAAAreaActionsComponent::OnBuildGunStateChanged);
+}
+
+void UAAAreaActionsComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+	GetOuterAFGBuildGun()->mOnStateChanged.RemoveDynamic(this, &UAAAreaActionsComponent::OnBuildGunStateChanged);
+	for(AAACornerIndicator*& Indicator : CornerIndicators)
 	{
-		if(const APlayerController* PlayerController = LocalPlayer->GetPlayerController(GetWorld()))
-		{
-			if(const AFGCharacterPlayer* Player = Cast<AFGCharacterPlayer>(PlayerController->GetPawn()))
-			{
-				Player->GetBuildGun()->mOnStateChanged.AddDynamic(this, &UAALocalPlayerSubsystem::OnBuildGunStateChanged);
-			}
-		}
+		Indicator->Destroy();
+	}
+	for(AAAWallIndicator*& Indicator : WallIndicators)
+	{
+		Indicator->Destroy();
+	}
+	if(TopIndicator)
+	{
+		TopIndicator->Destroy();
+		TopIndicator = nullptr;
+	}
+	if(BottomIndicator)
+	{
+		BottomIndicator->Destroy();
+		BottomIndicator = nullptr;
+	}
+	if (CurrentAction)
+	{
+		CurrentAction->Cancel();
+	}
+	if(SelectionActor)
+	{
+		SelectionActor->Destroy();
+		SelectionActor = nullptr;
 	}
 }
 
-void UAALocalPlayerSubsystem::SelectMap() {
+void UAAAreaActionsComponent::SelectMap() {
 	this->ClearSelection();
 	AddCorner(FVector2D(-350000.0, -350000.0));
 	AddCorner(FVector2D(450000.0, -350000.0));
@@ -40,7 +66,7 @@ void UAALocalPlayerSubsystem::SelectMap() {
 	UpdateHeight();
 }
 
-void UAALocalPlayerSubsystem::ClearSelection() {
+void UAAAreaActionsComponent::ClearSelection() {
 	for (int i = AreaCorners.Num() - 1; i >= 0; i--) {
 		RemoveCorner(i);
 	}
@@ -51,7 +77,7 @@ void UAALocalPlayerSubsystem::ClearSelection() {
 	UpdateExtraActors();
 }
 
-bool UAALocalPlayerSubsystem::RaycastMouseWithRange(FHitResult& OutHitResult, const bool bIgnoreCornerIndicators, const bool bIgnoreWallIndicators, const bool bIgnoreHeightIndicators, const TArray<AActor*> OtherIgnoredActors) const
+bool UAAAreaActionsComponent::RaycastMouseWithRange(FHitResult& OutHitResult, const bool bIgnoreCornerIndicators, const bool bIgnoreWallIndicators, const bool bIgnoreHeightIndicators, const TArray<AActor*> OtherIgnoredActors) const
 {
 	TArray<AActor*> IgnoredActors;
 
@@ -66,13 +92,13 @@ bool UAALocalPlayerSubsystem::RaycastMouseWithRange(FHitResult& OutHitResult, co
 		IgnoredActors.Add(BottomIndicator);
 	}
 
-	APlayerController* PlayerController = GetLocalPlayer<ULocalPlayer>()->GetPlayerController(GetWorld());
+	APlayerController* PlayerController = GetPlayerController();
 	APlayerCameraManager* CameraManager = PlayerController->PlayerCameraManager;
 
 	const FVector CameraLocation = CameraManager->GetCameraLocation();
 	const FVector CameraDirection = CameraManager->GetActorForwardVector();
 
-	const FVector LineTraceStart = CameraLocation + CameraDirection * (static_cast<AFGCharacterPlayer*>(PlayerController->GetPawn())->GetCapsuleComponent()->GetScaledCapsuleRadius() + 5);
+	const FVector LineTraceStart = CameraLocation + CameraDirection * (GetPlayerCharacter()->GetCapsuleComponent()->GetScaledCapsuleRadius() + 5);
 	const FVector LineTraceEnd = CameraLocation + CameraDirection * MaxRaycastDistance;
 
 	FCollisionQueryParams Params = FCollisionQueryParams::DefaultQueryParam;
@@ -87,7 +113,7 @@ bool UAALocalPlayerSubsystem::RaycastMouseWithRange(FHitResult& OutHitResult, co
 	return GetWorld()->LineTraceSingleByObjectType(OutHitResult, LineTraceStart, LineTraceEnd, ObjectParams, Params);
 }
 
-void UAALocalPlayerSubsystem::UpdateHeight() {
+void UAAAreaActionsComponent::UpdateHeight() {
 	for (AAACornerIndicator* Indicator : this->CornerIndicators) {
 		Indicator->UpdateHeight(this->AreaMinZ, this->AreaMaxZ);
 	}
@@ -110,7 +136,7 @@ void UAALocalPlayerSubsystem::UpdateHeight() {
 	this->TopIndicator->SetActorHiddenInGame(this->AreaMaxZ == MaxZ);
 }
 
-AAAWallIndicator* UAALocalPlayerSubsystem::CreateWallIndicator(const FVector2D From, const FVector2D To) const
+AAAWallIndicator* UAAAreaActionsComponent::CreateWallIndicator(const FVector2D From, const FVector2D To) const
 {
 	const FVector2D Middle = (From + To) / 2;
 	const float Length = FVector::Dist(FVector(From, 0), FVector(To, 0));
@@ -122,14 +148,14 @@ AAAWallIndicator* UAALocalPlayerSubsystem::CreateWallIndicator(const FVector2D F
 	return Indicator;
 }
 
-AAACornerIndicator* UAALocalPlayerSubsystem::CreateCornerIndicator(const FVector2D Location) const
+AAACornerIndicator* UAAAreaActionsComponent::CreateCornerIndicator(const FVector2D Location) const
 {
 	AAACornerIndicator* Indicator = GetWorld()->SpawnActor<AAACornerIndicator>(CornerIndicatorClass, FVector(Location, 0), FRotator::ZeroRotator);
 	Indicator->UpdateHeight(this->AreaMinZ, this->AreaMaxZ);
 	return Indicator;
 }
 
-void UAALocalPlayerSubsystem::AddCorner(const FVector2D Location) {
+void UAAAreaActionsComponent::AddCorner(const FVector2D Location) {
 	if(this->WallIndicators.Num() > 1) {
 		AAAWallIndicator* Wall = this->WallIndicators[this->WallIndicators.Num() - 1];
 		this->WallIndicators.RemoveAt(this->WallIndicators.Num() - 1);
@@ -148,7 +174,7 @@ void UAALocalPlayerSubsystem::AddCorner(const FVector2D Location) {
 	this->AreaCorners.Add(Location);
 }
 
-void UAALocalPlayerSubsystem::RemoveCorner(const int CornerIdx) {
+void UAAAreaActionsComponent::RemoveCorner(const int CornerIdx) {
 	AAACornerIndicator* Corner = this->CornerIndicators[CornerIdx];
 	this->CornerIndicators.RemoveAt(CornerIdx);
 	Corner->Destroy();
@@ -172,23 +198,45 @@ void UAALocalPlayerSubsystem::RemoveCorner(const int CornerIdx) {
 	}
 }
 
-void UAALocalPlayerSubsystem::UpdateExtraActors() const
+void UAAAreaActionsComponent::UpdateExtraActors() const
 {
 	UFGOutlineComponent::Get(GetWorld())->ShowDismantlePendingMaterial(this->ExtraActors);
 }
 
-void UAALocalPlayerSubsystem::DelayedUpdateExtraActors()
+void UAAAreaActionsComponent::DelayedUpdateExtraActors()
 {
-	GetWorld()->GetTimerManager().SetTimerForNextTick(this, &UAALocalPlayerSubsystem::UpdateExtraActors);
+	GetWorld()->GetTimerManager().SetTimerForNextTick(this, &UAAAreaActionsComponent::UpdateExtraActors);
 }
 
-void UAALocalPlayerSubsystem::OnBuildGunStateChanged(EBuildGunState NewState)
+void UAAAreaActionsComponent::OnBuildGunStateChanged(EBuildGunState NewState)
 {
-	if (NewState != EBuildGunState::BGS_NONE && NewState != EBuildGunState::BGS_MENU)
+	if (NewState != EBuildGunState::BGS_MENU)
 	{
+		for(AAACornerIndicator*& Indicator : CornerIndicators)
+			Indicator->Destroy();
+		CornerIndicators.Empty();
+		
+		for(AAAWallIndicator*& Indicator : WallIndicators)
+			Indicator->Destroy();
+		WallIndicators.Empty();
+
+		AreaCorners.Empty();
+
+		AreaMinZ = MinZ;
+		AreaMaxZ = MaxZ;
+		UpdateHeight();
+
+		ExtraActors.Empty();
+		DelayedUpdateExtraActors();
+
 		if (CurrentAction)
 		{
 			CurrentAction->Cancel();
+		}
+		if(SelectionActor)
+		{
+			SelectionActor->Destroy();
+			SelectionActor = nullptr;
 		}
 	}
 }
@@ -228,7 +276,7 @@ void GetMostCommonRotation(TArray<AActor*>& Actors, FRotator& Rotation) {
 	Rotation = FRotator(0, BestRotation, 0);
 }
 
-bool UAALocalPlayerSubsystem::RunAction(const TSubclassOf<AAAAction> ActionClass, FText& Error) {
+bool UAAAreaActionsComponent::RunAction(const TSubclassOf<AAAAction> ActionClass, FText& Error) {
 	if (this->AreaCorners.Num() < 3 && this->ExtraActors.Num() == 0) {
 		// TODO: Blueprint placing should not be an action
 		if(!ActionClass->IsChildOf(AAALoadBlueprint::StaticClass()))
@@ -250,16 +298,17 @@ bool UAALocalPlayerSubsystem::RunAction(const TSubclassOf<AAAAction> ActionClass
 	GetMostCommonRotation(ActorsInArea, Rotation);
 
 	this->CurrentAction = GetWorld()->SpawnActor<AAAAction>(ActionClass, Middle, Rotation);
-	this->CurrentAction->SetSubsystem(this);
-	this->CurrentAction->EnableInput(GetLocalPlayer()->GetPlayerController(GetWorld()));
+	this->CurrentAction->SetAreaActionsComponent(this);
+	this->CurrentAction->EnableInput(GetPlayerController());
 	this->CurrentAction->SetActors(ActorsInArea);
 	this->CurrentAction->Run();
 	return true;
 }
 
-void UAALocalPlayerSubsystem::ActionDone() {
+void UAAAreaActionsComponent::ActionDone() {
 	this->CurrentAction->Destroy();
 	this->CurrentAction = nullptr;
+	this->ShowBuildMenu();
 }
 
 bool IsPointInPolygon(const FVector2D Point, TArray<FVector2D>& Polygon) {
@@ -293,7 +342,7 @@ bool IsActorInArea(AActor* Actor, TArray<FVector2D>& Corners, const float MinZ, 
 	return MinZ <= Actor->GetActorLocation().Z && Actor->GetActorLocation().Z <= MaxZ && IsPointInPolygon(FVector2D(Actor->GetActorLocation().X, Actor->GetActorLocation().Y), Corners);
 }
 
-void UAALocalPlayerSubsystem::GetAllActorsInArea(TArray<AActor*>& OutActors) {
+void UAAAreaActionsComponent::GetAllActorsInArea(TArray<AActor*>& OutActors) {
 	for (TActorIterator<AFGBuildable> ActorIt(GetWorld()); ActorIt; ++ActorIt) {
 		if (IsActorInArea(*ActorIt, this->AreaCorners, this->AreaMinZ, this->AreaMaxZ)) {
 			OutActors.Add(*ActorIt);
@@ -301,10 +350,25 @@ void UAALocalPlayerSubsystem::GetAllActorsInArea(TArray<AActor*>& OutActors) {
 	}
 }
 
-void UAALocalPlayerSubsystem::ToggleBuildMenu()
+void UAAAreaActionsComponent::ToggleBuildMenu()
 {
-	APlayerController* PlayerController = GetLocalPlayer<ULocalPlayer>()->GetPlayerController(GetWorld());
-	AFGCharacterPlayer* PlayerCharacter = Cast<AFGCharacterPlayer>(PlayerController->GetPawn());
+	UFGBuildGunState* MenuState = GetPlayerCharacter()->GetBuildGun()->GetBuildGunStateFor(EBuildGunState::BGS_MENU);
+	if(MenuState->IsActive())
+		MenuState->EndState();
+	else
+		MenuState->BeginState();
+}
 
-	PlayerCharacter->ToggleBuildGun();
+void UAAAreaActionsComponent::HideBuildMenu()
+{
+	UFGBuildGunState* MenuState = GetPlayerCharacter()->GetBuildGun()->GetBuildGunStateFor(EBuildGunState::BGS_MENU);
+	if(MenuState->IsActive())
+		MenuState->EndState();
+}
+
+void UAAAreaActionsComponent::ShowBuildMenu()
+{
+	UFGBuildGunState* MenuState = GetPlayerCharacter()->GetBuildGun()->GetBuildGunStateFor(EBuildGunState::BGS_MENU);
+	if(!MenuState->IsActive())
+		MenuState->BeginState();
 }

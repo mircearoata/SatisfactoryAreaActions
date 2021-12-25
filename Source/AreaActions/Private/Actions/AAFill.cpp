@@ -1,6 +1,7 @@
 ﻿#include "Actions/AAFill.h"
 
-#include "AALocalPlayerSubsystem.h"
+#include "AAAreaActionsComponent.h"
+#include "AABlueprintFunctionLibrary.h"
 #include "FGOutlineComponent.h"
 #include "FGPlayerController.h"
 #include "Buildables/FGBuildableStorage.h"
@@ -20,8 +21,7 @@ void AAAFill::Tick(float DeltaSeconds)
 		CopyBuildingsComponent->GetAllPreviewHolograms(Holograms);
 		TArray<AActor*> HologramsActors(MoveTemp(Holograms));
 		FHitResult HitResult;
-		UAALocalPlayerSubsystem* AALocalPlayerSubsystem = GetWorld()->GetFirstLocalPlayerFromController()->GetSubsystem<UAALocalPlayerSubsystem>();
-		if(AALocalPlayerSubsystem->RaycastMouseWithRange(HitResult, true, true, true, HologramsActors))
+		if(AreaActionsComponent->RaycastMouseWithRange(HitResult, true, true, true, HologramsActors))
 		{
 			FVector Location = CopyBuildingsComponent->GetBounds().Rotation.UnrotateVector(HitResult.Location - CopyBuildingsComponent->GetBounds().Center);
 			FVector CopyOffset = CopyBuildingsComponent->GetBounds().Extents * 2 + Border;
@@ -56,6 +56,7 @@ void AAAFill::EnableInput(APlayerController* PlayerController)
 	
 	InputComponent->BindAction("PrimaryFire", EInputEvent::IE_Pressed, this, &AAAFill::PrimaryFire);
 	InputComponent->BindAction("SecondaryFire", EInputEvent::IE_Pressed, this, &AAAFill::PrimaryFire);
+	InputComponent->BindAction("Inventory", EInputEvent::IE_Pressed, this, &AAAFill::OpenMenu); // TODO Temporary
 	ScrollUpInputActionBinding = &InputComponent->BindAction("BuildGunScrollUp_PhotoModeFOVUp", EInputEvent::IE_Pressed, this, &AAAFill::ScrollUp);
 	ScrollDownInputActionBinding = &InputComponent->BindAction("BuildGunScrollDown_PhotoModeFOVDown", EInputEvent::IE_Pressed, this, &AAAFill::ScrollDown);
 	ScrollUpInputActionBinding->bConsumeInput = false;
@@ -66,11 +67,22 @@ void AAAFill::PrimaryFire()
 {
 	if(bIsPlacing)
 	{
-		bIsPlacing = false;
-		ScrollUpInputActionBinding->bConsumeInput = false;
-		ScrollDownInputActionBinding->bConsumeInput = false;
+		if(Finish())
+		{
+			bIsPlacing = false;
+			ScrollUpInputActionBinding->bConsumeInput = false;
+			ScrollDownInputActionBinding->bConsumeInput = false;
+			Done();
+		}
 	}
-	LocalPlayerSubsystem->ToggleBuildMenu();
+}
+
+void AAAFill::OpenMenu()
+{
+	bIsPlacing = false;
+	ScrollUpInputActionBinding->bConsumeInput = false;
+	ScrollDownInputActionBinding->bConsumeInput = false;
+	AreaActionsComponent->ShowBuildMenu();
 }
 
 void AAAFill::ScrollUp()
@@ -153,10 +165,20 @@ void AAAFill::Preview()
 }
 
 
-bool AAAFill::Finish(const TArray<UFGInventoryComponent*>& Inventories, TArray<FInventoryStack>& MissingItems)
+bool AAAFill::Finish()
 {
+	if(!CanFinish())
+		return false;
 	this->Preview();
-	return this->CopyBuildingsComponent->Finish(Inventories, MissingItems);
+	TMap<TSubclassOf<UFGItemDescriptor>, int32> MissingItemsMap;
+	const bool ReturnValue = this->CopyBuildingsComponent->Finish(GetInventories(), MissingItemsMap);
+	return ReturnValue;  
+}
+
+bool AAAFill::CanFinish() const
+{
+	TMap<TSubclassOf<UFGItemDescriptor>, int32> MissingItemsMap;
+	return UAABlueprintFunctionLibrary::InventoriesHaveEnoughItems(GetInventories(), CopyBuildingsComponent->GetRequiredItems(), MissingItemsMap);
 }
 
 void AAAFill::RemoveMissingItemsWidget()
@@ -169,7 +191,7 @@ void AAAFill::EnterPlacing()
 	ScrollUpInputActionBinding->bConsumeInput = true;
 	ScrollDownInputActionBinding->bConsumeInput = true;
 	bIsPlacing = true;
-	LocalPlayerSubsystem->ToggleBuildMenu();
+	AreaActionsComponent->HideBuildMenu();
 }
 
 FFillAxis FFillAxis::None = FFillAxis();

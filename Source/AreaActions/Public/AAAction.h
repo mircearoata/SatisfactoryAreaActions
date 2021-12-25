@@ -27,7 +27,7 @@ public:
 	void Cancel();
 
 	FORCEINLINE void SetActors(const TArray<AActor*> InActors) { this->Actors = InActors; }
-	FORCEINLINE void SetSubsystem(class UAALocalPlayerSubsystem* InSubsystem) { this->LocalPlayerSubsystem = InSubsystem; }
+	FORCEINLINE void SetAreaActionsComponent(class UAAAreaActionsComponent* InAreaActionsComponent) { this->AreaActionsComponent = InAreaActionsComponent; }
 
 	UFUNCTION(BlueprintPure, Category = "Action")
 	static FText GetActionName(TSubclassOf<AAAAction> InClass);
@@ -43,7 +43,7 @@ public:
 	
 protected:
 	UPROPERTY(BlueprintReadOnly)
-	class UAALocalPlayerSubsystem* LocalPlayerSubsystem;
+	UAAAreaActionsComponent* AreaActionsComponent;
 
 	UPROPERTY(BlueprintReadOnly)
 	TArray<AActor*> Actors;

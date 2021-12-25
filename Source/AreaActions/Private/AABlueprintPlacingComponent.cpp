@@ -2,6 +2,7 @@
 
 #include "AABlueprintPlacingComponent.h"
 
+#include "AABlueprintFunctionLibrary.h"
 #include "AAObjectCollectorArchive.h"
 #include "AAObjectReferenceArchive.h"
 #include "AAObjectValidatorArchive.h"
@@ -184,67 +185,12 @@ void UAABlueprintPlacingComponent::RemoveCopy(const int CopyId)
     this->CopyLocations.Remove(CopyId);
 }
 
-bool UAABlueprintPlacingComponent::CheckItems(TMap<TSubclassOf<UFGItemDescriptor>, int32> RemainingItems, TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems, const bool TakeItems) const
-{
-    if(TakeItems)
-    {
-        if(!CheckItems(RemainingItems, Inventories, OutMissingItems, false))
-            return false;
-    }
-    
-    for(UFGInventoryComponent* Inventory : Inventories)
-    {
-        TArray<FInventoryStack> Stacks;
-        Inventory->GetInventoryStacks(Stacks);
-        for(FInventoryStack& Stack : Stacks)
-        {
-            if(!Stack.HasItems()) continue;
-            if(RemainingItems.Contains(Stack.Item.ItemClass))
-            {
-                const int TakenItems = FGenericPlatformMath::Min(Stack.NumItems, RemainingItems[Stack.Item.ItemClass]);
-                RemainingItems[Stack.Item.ItemClass] -= TakenItems;
-                if(RemainingItems[Stack.Item.ItemClass] == 0)
-                    RemainingItems.Remove(Stack.Item.ItemClass);
-                if(TakeItems)
-                    Inventory->Remove(Stack.Item.ItemClass, TakenItems);
-            }
-        }
-    }
-
-    if(RemainingItems.Num() != 0)
-    {
-        for(const auto ItemAmount : RemainingItems)
-            OutMissingItems.Add(FInventoryStack(ItemAmount.Value, ItemAmount.Key));
-        return false;
-    }
-    return true;
-}
-
-bool UAABlueprintPlacingComponent::TryTakeItems(TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems)
-{
-    if(this->Preview.Num() == 0)
-        return true;
-        
-    const bool UseBuildCosts = !static_cast<AFGGameState*>(GetWorld()->GetGameState())->GetCheatNoCost();
-
-    TMap<TSubclassOf<UFGItemDescriptor>, int32> ItemsPerCopy;
-    if(UseBuildCosts)
-        ItemsPerCopy.Append(Blueprint->GetBuildCosts());
-    ItemsPerCopy.Append(Blueprint->GetOtherItems());
-    
-    TMap<TSubclassOf<UFGItemDescriptor>, int32> TotalItems;
-    for(auto ItemAmount : ItemsPerCopy)
-        TotalItems.Add(ItemAmount.Key, ItemAmount.Value * this->Preview.Num());
-
-    return CheckItems(TotalItems, Inventories, OutMissingItems, true);
-}
-
-bool UAABlueprintPlacingComponent::Finish(TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems)
+bool UAABlueprintPlacingComponent::Finish(TArray<UFGInventoryComponent*> Inventories, TMap<TSubclassOf<UFGItemDescriptor>, int32>& OutMissingItems)
 {
     if(this->CopyLocations.Num() == 0)
         return true;
 
-    if(!TryTakeItems(Inventories, OutMissingItems))
+    if(!UAABlueprintFunctionLibrary::TakeItemsFromInventories(Inventories, GetRequiredItems(), OutMissingItems))
         return false;
 
     for(const auto& [CopyId, CopyLocation] : this->CopyLocations)
@@ -332,4 +278,20 @@ int32 UAABlueprintPlacingComponent::GetHologramObjectIdx(AFGBuildableHologram* H
             return *KeyPtr;
     }
     return -1;
+}
+
+TMap<TSubclassOf<UFGItemDescriptor>, int32> UAABlueprintPlacingComponent::GetRequiredItems()
+{
+    const bool UseBuildCosts = !static_cast<AFGGameState*>(GetWorld()->GetGameState())->GetCheatNoCost();
+
+    TMap<TSubclassOf<UFGItemDescriptor>, int32> ItemsPerCopy;
+    if(UseBuildCosts)
+        ItemsPerCopy.Append(Blueprint->GetBuildCosts());
+    ItemsPerCopy.Append(Blueprint->GetOtherItems());
+    
+    TMap<TSubclassOf<UFGItemDescriptor>, int32> TotalItems;
+    for(auto ItemAmount : ItemsPerCopy)
+        TotalItems.Add(ItemAmount.Key, ItemAmount.Value * this->Preview.Num());
+    
+    return TotalItems;
 }

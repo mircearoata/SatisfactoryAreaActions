@@ -22,6 +22,7 @@ public:
 	virtual void EnableInput(APlayerController* PlayerController) override;
 
 	void PrimaryFire();
+	void SecondaryFire();
 
 	UFUNCTION(BlueprintCallable)
 	void SetSelectionMode(const EAASelectionMode Mode) { this->SelectionMode = Mode; }
@@ -29,5 +30,14 @@ public:
 	UFUNCTION(BlueprintCallable)
 	EAASelectionMode GetSelectionMode() const { return this->SelectionMode; }
 
+	UFUNCTION(BlueprintCallable)
+	void SetAreaActionsComponent(class UAAAreaActionsComponent* Subsystem) { this->AreaActionsComponent = Subsystem; }
+	
+	UFUNCTION(BlueprintCallable)
+	class UAAAreaActionsComponent* GetAreaActionsComponent() const { return this->AreaActionsComponent; }
+
 	EAASelectionMode SelectionMode;
+
+	UPROPERTY()
+	class UAAAreaActionsComponent* AreaActionsComponent;
 };

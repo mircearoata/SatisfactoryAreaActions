@@ -3,7 +3,7 @@
 #include "AABlueprint.h"
 #include "AABlueprintFunctionLibrary.h"
 #include "AABlueprintSystem.h"
-#include "AALocalPlayerSubsystem.h"
+#include "AAAreaActionsComponent.h"
 #include "FGCharacterPlayer.h"
 #include "FGInventoryComponent.h"
 #include "FGPlayerController.h"
@@ -27,8 +27,7 @@ void AAALoadBlueprint::Tick(float DeltaSeconds)
 		BlueprintPlacingComponent->GetAllPreviewHolograms(Holograms);
 		TArray<AActor*> HologramsActors(MoveTemp(Holograms));
 		FHitResult HitResult;
-		UAALocalPlayerSubsystem* AALocalPlayerSubsystem = GetWorld()->GetFirstLocalPlayerFromController()->GetSubsystem<UAALocalPlayerSubsystem>();
-		if(AALocalPlayerSubsystem->RaycastMouseWithRange(HitResult, true, true, true, HologramsActors))
+		if(AreaActionsComponent->RaycastMouseWithRange(HitResult, true, true, true, HologramsActors))
 		{
 			if(AnchorIdx != INDEX_NONE)
 			{
@@ -67,8 +66,7 @@ void AAALoadBlueprint::PrimaryFire()
 		FHitResult HitResult;
 		TArray<AFGBuildableHologram*> PreviewHolograms;
 		BlueprintPlacingComponent->GetAllPreviewHolograms(PreviewHolograms);
-		UAALocalPlayerSubsystem* AALocalPlayerSubsystem = GetWorld()->GetFirstLocalPlayerFromController()->GetSubsystem<UAALocalPlayerSubsystem>();
-		if(AALocalPlayerSubsystem->RaycastMouseWithRange(HitResult, true, true, true) && PreviewHolograms.Contains(HitResult.Actor))
+		if(AreaActionsComponent->RaycastMouseWithRange(HitResult, true, true, true) && PreviewHolograms.Contains(HitResult.Actor))
 		{
 			AnchorIdx = BlueprintPlacingComponent->GetHologramObjectIdx(static_cast<AFGBuildableHologram*>(HitResult.Actor.Get()));
 		}
@@ -83,7 +81,7 @@ void AAALoadBlueprint::PrimaryFire()
 		ScrollUpInputActionBinding->bConsumeInput = false;
 		ScrollDownInputActionBinding->bConsumeInput = false;
 	}
-	LocalPlayerSubsystem->ToggleBuildMenu();
+	AreaActionsComponent->ToggleBuildMenu();
 }
 
 void AAALoadBlueprint::ScrollUp()
@@ -148,8 +146,10 @@ void AAALoadBlueprint::Preview()
 
 bool AAALoadBlueprint::Finish(const TArray<UFGInventoryComponent*>& Inventories, TArray<FInventoryStack>& MissingItems)
 {
+	// TODO Make this whole action be like Copy. Also probably shouldn't be an action
 	this->Preview();
-	return this->BlueprintPlacingComponent->Finish(Inventories, MissingItems);
+	TMap<TSubclassOf<UFGItemDescriptor>, int32> MissingItemsMap;
+	return this->BlueprintPlacingComponent->Finish(Inventories, MissingItemsMap);
 }
 
 void AAALoadBlueprint::RemoveMissingItemsWidget()
@@ -160,7 +160,7 @@ void AAALoadBlueprint::RemoveMissingItemsWidget()
 void AAALoadBlueprint::EnterPickAnchor()
 {
 	bIsPickingAnchor = true;
-	LocalPlayerSubsystem->ToggleBuildMenu();
+	AreaActionsComponent->ToggleBuildMenu();
 }
 
 void AAALoadBlueprint::EnterPlacing()
@@ -168,5 +168,5 @@ void AAALoadBlueprint::EnterPlacing()
 	ScrollUpInputActionBinding->bConsumeInput = true;
 	ScrollDownInputActionBinding->bConsumeInput = true;
 	bIsPlacing = true;
-	LocalPlayerSubsystem->ToggleBuildMenu();
+	AreaActionsComponent->ToggleBuildMenu();
 }

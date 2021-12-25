@@ -113,7 +113,7 @@ public:
 	void RemoveCopy(int CopyId);
 
 	UFUNCTION(BlueprintCallable)
-	bool Finish(const TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems);
+	bool Finish(const TArray<UFGInventoryComponent*> Inventories, TMap<TSubclassOf<UFGItemDescriptor>, int32>& OutMissingItems);
 
 	UFUNCTION(BlueprintCallable)
 	AFGBuildableHologram* GetPreviewHologram(int CopyId, AFGBuildable* Buildable);
@@ -124,6 +124,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void GetBuildingHolograms(int CopyId, TMap<AFGBuildable*, AFGBuildableHologram*>& OutPreviewHolograms);
 
+	UFUNCTION(BlueprintCallable)
+	TMap<TSubclassOf<UFGItemDescriptor>, int32> GetRequiredItems();
+
 private:
 	bool ValidateObjects(TArray<AFGBuildable*>& OutBuildingsWithIssues);
 	
@@ -133,9 +136,6 @@ private:
 
 	void CalculateBounds();
 	void SerializeOriginal();
-	
-	bool TryTakeItems(const TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems);
-	bool CheckItems(TMap<TSubclassOf<UFGItemDescriptor>, int32> RemainingItems, const TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems, const bool TakeItems = false) const;
 	
 private:
 	int32 CurrentId;

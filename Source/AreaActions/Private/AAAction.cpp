@@ -2,7 +2,7 @@
 
 #include "AAAction.h"
 
-#include "AALocalPlayerSubsystem.h"
+#include "AAAreaActionsComponent.h"
 #include "FGPlayerController.h"
 
 void AAAAction::Run_Implementation() {
@@ -10,7 +10,7 @@ void AAAAction::Run_Implementation() {
 
 void AAAAction::Done()
 {
-	this->LocalPlayerSubsystem->ActionDone();
+	this->AreaActionsComponent->ActionDone();
 }
 
 void AAAAction::Cancel()

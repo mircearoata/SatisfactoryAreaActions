@@ -109,7 +109,7 @@ public:
 	FORCEINLINE void MoveCopy(const int CopyId, const FVector Offset, const FRotator Rotation, const bool Relative = true) { this->MoveCopy(CopyId, Offset, Rotation, GetBuildingsCenter(), Relative); }
 	void RemoveCopy(int CopyId);
 
-	bool Finish(TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems);
+	bool Finish(TArray<UFGInventoryComponent*> Inventories, TMap<TSubclassOf<UFGItemDescriptor>, int32>& OutMissingItems);
 
 	UFUNCTION(BlueprintCallable)
 	AFGBuildableHologram* GetPreviewHologram(int CopyId, int32 Buildable);
@@ -120,13 +120,13 @@ public:
 	UFUNCTION(BlueprintCallable)
 	int32 GetHologramObjectIdx(AFGBuildableHologram* Hologram);
 
+	UFUNCTION(BlueprintCallable)
+	TMap<TSubclassOf<UFGItemDescriptor>, int32> GetRequiredItems();
+
 private:
 	FTransform TransformAroundPoint(FTransform OriginalTransform, FVector Offset, FRotator Rotation, FVector RotationCenter);
 	
 	void FixReferencesForCopy(const FAABlueprintObjectMap& Copy);
-
-	bool TryTakeItems(TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems);
-	bool CheckItems(TMap<TSubclassOf<UFGItemDescriptor>, int32> RemainingItems, TArray<UFGInventoryComponent*> Inventories, TArray<FInventoryStack>& OutMissingItems, const bool TakeItems = false) const;
 	
 private:
 	UPROPERTY()

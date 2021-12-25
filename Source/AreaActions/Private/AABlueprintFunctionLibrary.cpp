@@ -37,3 +37,59 @@ UFGHotbarShortcut* UAABlueprintFunctionLibrary::CreateHotbarShortcut(AFGPlayerSt
 
 	return PlayerState->GetOrCreateShortcutOnHotbar(HotbarShortcutClass, PlayerState->mHotbars[PlayerState->GetCurrentHotbarIndex()], Index);
 }
+
+UAAAreaActionsComponent* UAABlueprintFunctionLibrary::GetAreaActionsComponent(AFGCharacterPlayer* PlayerCharacter)
+{
+	if(!PlayerCharacter || !PlayerCharacter->GetBuildGun())
+		return nullptr;
+	return PlayerCharacter->GetBuildGun()->FindComponentByClass<UAAAreaActionsComponent>();
+}
+
+bool UAABlueprintFunctionLibrary::InventoriesHaveEnoughItems(const TArray<UFGInventoryComponent*>& Inventories, const TMap<TSubclassOf<UFGItemDescriptor>, int32>& Items, TMap<TSubclassOf<UFGItemDescriptor>, int32>& MissingItems)
+{
+	MissingItems = Items;
+	for(UFGInventoryComponent* Inventory : Inventories)
+	{
+		TArray<FInventoryStack> Stacks;
+		Inventory->GetInventoryStacks(Stacks);
+		for(FInventoryStack& Stack : Stacks)
+		{
+			if(!Stack.HasItems()) continue;
+			if(MissingItems.Contains(Stack.Item.ItemClass))
+			{
+				const int TakenItems = FGenericPlatformMath::Min(Stack.NumItems, MissingItems[Stack.Item.ItemClass]);
+				MissingItems[Stack.Item.ItemClass] -= TakenItems;
+				if(MissingItems[Stack.Item.ItemClass] == 0)
+					MissingItems.Remove(Stack.Item.ItemClass);
+			}
+		}
+	}
+
+	return MissingItems.Num() == 0;
+}
+
+bool UAABlueprintFunctionLibrary::TakeItemsFromInventories(const TArray<UFGInventoryComponent*>& Inventories, const TMap<TSubclassOf<UFGItemDescriptor>, int32>& Items, TMap<TSubclassOf<UFGItemDescriptor>, int32>& MissingItems)
+{
+	if(!InventoriesHaveEnoughItems(Inventories, Items, MissingItems))
+		return false;
+	
+	for(UFGInventoryComponent* Inventory : Inventories)
+	{
+		TArray<FInventoryStack> Stacks;
+		Inventory->GetInventoryStacks(Stacks);
+		for(FInventoryStack& Stack : Stacks)
+		{
+			if(!Stack.HasItems()) continue;
+			if(MissingItems.Contains(Stack.Item.ItemClass))
+			{
+				const int TakenItems = FGenericPlatformMath::Min(Stack.NumItems, MissingItems[Stack.Item.ItemClass]);
+				MissingItems[Stack.Item.ItemClass] -= TakenItems;
+				if(MissingItems[Stack.Item.ItemClass] == 0)
+					MissingItems.Remove(Stack.Item.ItemClass);
+                Inventory->Remove(Stack.Item.ItemClass, TakenItems);
+			}
+		}
+	}
+
+	return MissingItems.Num() == 0;
+}

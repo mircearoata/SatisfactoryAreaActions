@@ -3,7 +3,7 @@
 #include "Actions/AAMassDismantle.h"
 
 #include "Buildables/FGBuildable.h"
-#include "AALocalPlayerSubsystem.h"
+#include "AAAreaActionsComponent.h"
 #include "FGCharacterPlayer.h"
 #include "FGInventoryLibrary.h"
 
@@ -25,7 +25,7 @@ void AAAMassDismantle::Dismantle()
 
 void AAAMassDismantle::GiveRefunds()
 {
-	AFGCharacterPlayer* Player = static_cast<AFGCharacterPlayer*>(this->LocalPlayerSubsystem->GetLocalPlayer<>()->GetPlayerController(GetWorld())->GetPawn());
+	AFGCharacterPlayer* Player = this->AreaActionsComponent->GetPlayerCharacter();
     AFGCrate* Crate = GetWorld()->SpawnActor<AFGCrate>(
         CrateClass,
         Player->GetActorLocation() + Player->GetActorForwardVector() * CrateDistance,
@@ -39,6 +39,6 @@ void AAAMassDismantle::GiveRefunds()
     }
     Crate->GetInventory()->Resize(CrateInventorySlots);
     Crate->GetInventory()->AddStacks(this->Refunds);
-    this->LocalPlayerSubsystem->ClearSelection();
+    this->AreaActionsComponent->ClearSelection();
     this->Done();
 }
