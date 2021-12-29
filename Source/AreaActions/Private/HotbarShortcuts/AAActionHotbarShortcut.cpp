@@ -1,7 +1,7 @@
 // Copyright Coffee Stain Studios. All Rights Reserved.
 
 
-#include "AAActionHotbarShortcut.h"
+#include "HotbarShortcuts/AAActionHotbarShortcut.h"
 
 #include "AABlueprintFunctionLibrary.h"
 #include "AAAreaActionsComponent.h"
