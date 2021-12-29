@@ -62,6 +62,9 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	AAAAction* CurrentAction;
 
+	UPROPERTY(BlueprintReadWrite)
+	class AAASelectionActor* SelectionActor;
+
 	UFUNCTION(BlueprintCallable)
 	void ToggleBuildMenu();
 
@@ -95,9 +98,7 @@ private:
 
 	UPROPERTY()
 	AAAHeightIndicator* BottomIndicator;
-
-	UPROPERTY()
-	class AAASelectionActor* SelectionActor;
+	
 	friend class AAASelectionActor;
 public:
 	UPROPERTY(EditDefaultsOnly)
