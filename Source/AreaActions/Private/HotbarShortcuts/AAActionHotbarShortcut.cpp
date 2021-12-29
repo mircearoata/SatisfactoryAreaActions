@@ -22,6 +22,8 @@ void UAAActionHotbarShortcut::Execute_Implementation(AFGPlayerController* Owner)
 {
 	FText Error;
 	UAAAreaActionsComponent* AreaActionsComponent = UAABlueprintFunctionLibrary::GetAreaActionsComponent(static_cast<AFGCharacterPlayer*>(Owner->GetPawn()));
+	if(AreaActionsComponent->CurrentAction != nullptr)
+		AreaActionsComponent->CurrentAction->Cancel();
 	AreaActionsComponent->RunAction(mActionToActivate, Error);
 }
 

@@ -30,7 +30,7 @@ void UAABlueprintSystem::DiscoverBlueprints()
 		FAABlueprintHeader Header;
 		MemoryReaderProxy << Header;
 		if(!MemoryReaderProxy.IsError())
-			CachedBlueprints.Add(FilePath, Header);
+			CachedBlueprints.Add(FileName, Header);
 	}
 }
 
@@ -53,11 +53,11 @@ bool UAABlueprintSystem::SaveBlueprint(const FString FilePath, UAABlueprint* Blu
 	return Result;
 }
 
-UAABlueprint* UAABlueprintSystem::LoadBlueprint(const FString FilePath)
+UAABlueprint* UAABlueprintSystem::LoadBlueprint(const FString FileName)
 {
 	UAABlueprint* Blueprint = NewObject<UAABlueprint>(this);
 	TArray<uint8> FileRaw;
-	if (!FFileHelper::LoadFileToArray(FileRaw, *FilePath))
+	if (!FFileHelper::LoadFileToArray(FileRaw, *(GetBlueprintsDir() / FileName)))
 		return nullptr;
 	FMemoryReader MemoryReader(FileRaw);
 	FObjectAndNameAsStringProxyArchive MemoryReaderProxy(MemoryReader, true);

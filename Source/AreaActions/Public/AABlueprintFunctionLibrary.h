@@ -23,8 +23,11 @@ class AREAACTIONS_API UAABlueprintFunctionLibrary : public UBlueprintFunctionLib
 	UFUNCTION(BlueprintCallable, Category="AreaActions|Hologram")
 	static FTransform GetHologramScroll(class AFGHologram* Hologram, int32 Delta);
 
-	UFUNCTION(BlueprintCallable, Category="AreaActions|Hotbar")
+	UFUNCTION(BlueprintCallable, Category="AreaActions|Hotbar", meta=(DeterminesOutputType="HotbarShortcutClass"))
 	static UFGHotbarShortcut* CreateHotbarShortcut(AFGPlayerState* PlayerState, TSubclassOf<UFGHotbarShortcut> HotbarShortcutClass, int32 Index);
+
+	UFUNCTION(BlueprintCallable, Category="AreaActions|Hotbar")
+	static void BroadcastHotbarUpdated(AFGPlayerController* PlayerController, int32 Index);
 
 	UFUNCTION(BlueprintPure, Category="AreaActions")
 	static UAAAreaActionsComponent* GetAreaActionsComponent(AFGCharacterPlayer* PlayerCharacter);

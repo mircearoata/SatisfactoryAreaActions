@@ -40,6 +40,12 @@ UFGHotbarShortcut* UAABlueprintFunctionLibrary::CreateHotbarShortcut(AFGPlayerSt
 	return PlayerState->GetOrCreateShortcutOnHotbar(HotbarShortcutClass, PlayerState->mHotbars[PlayerState->GetCurrentHotbarIndex()], Index);
 }
 
+void UAABlueprintFunctionLibrary::BroadcastHotbarUpdated(AFGPlayerController* PlayerController, int32 Index)
+{
+	PlayerController->OnShortcutSet.Broadcast(Index);
+	PlayerController->OnShortcutChanged.Broadcast();
+}
+
 UAAAreaActionsComponent* UAABlueprintFunctionLibrary::GetAreaActionsComponent(AFGCharacterPlayer* PlayerCharacter)
 {
 	if(!PlayerCharacter || !PlayerCharacter->GetBuildGun())

@@ -24,7 +24,7 @@ public:
 	FORCEINLINE TMap<FString, FAABlueprintHeader> GetCachedBlueprints() const { return CachedBlueprints; }
 	
 	bool SaveBlueprint(const FString FilePath, UAABlueprint* Blueprint);
-	UAABlueprint* LoadBlueprint(const FString FilePath);
+	UAABlueprint* LoadBlueprint(const FString FileName);
 	static FString GetBlueprintsDir();
 	static FString GetBlueprintPath(const FString Name);
 

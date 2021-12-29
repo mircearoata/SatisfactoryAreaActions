@@ -135,9 +135,10 @@ void AAALoadBlueprint::SetDeltaFromAnchorTransform(FTransform HologramTransform)
 	DeltaRotation = FRotator(FGenericPlatformMath::RoundToInt(DeltaRotation.Pitch), FGenericPlatformMath::RoundToInt(DeltaRotation.Yaw), FGenericPlatformMath::RoundToInt(DeltaRotation.Roll));
 }
 
-bool AAALoadBlueprint::SetPath(const FString BlueprintPath)
+bool AAALoadBlueprint::SetPath(const FString InBlueprintFileName)
 {
-	Blueprint = GetGameInstance()->GetSubsystem<UAABlueprintSystem>()->LoadBlueprint(BlueprintPath);
+	this->BlueprintFileName = InBlueprintFileName;
+	Blueprint = GetGameInstance()->GetSubsystem<UAABlueprintSystem>()->LoadBlueprint(InBlueprintFileName);
 	if (!Blueprint) {
 		return false;
 	}

@@ -39,10 +39,13 @@ public:
 	}
 
 	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FString GetBlueprintFileName() const { return this->BlueprintFileName; }
+
+	UFUNCTION(BlueprintCallable)
 	void SetDeltaFromAnchorTransform(FTransform HologramTransform);
 
 	UFUNCTION(BlueprintCallable)
-	bool SetPath(const FString BlueprintPath);
+	bool SetPath(const FString InBlueprintFileName);
 	
 	UFUNCTION(BlueprintCallable)
 	void Preview();
@@ -77,7 +80,9 @@ protected:
 	UPROPERTY()
 	UWidget* MissingItemsWidget;
 	
-	public:
+	FString BlueprintFileName;
+
+public:
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsPickingAnchor;
 	
