@@ -289,6 +289,11 @@ bool UAAAreaActionsComponent::RunAction(const TSubclassOf<AAAAction> ActionClass
 		Error = ConflictingActionRunningMessage;
 		return false;
 	}
+	if(SelectionActor)
+	{
+		SelectionActor->Destroy();
+		SelectionActor = nullptr;
+	}
 	TArray<AActor*> ActorsInArea;
 	this->GetAllActorsInArea(ActorsInArea);
 	ActorsInArea.Append(this->ExtraActors);
