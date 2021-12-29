@@ -295,3 +295,14 @@ TMap<TSubclassOf<UFGItemDescriptor>, int32> UAABlueprintPlacingComponent::GetReq
     
     return TotalItems;
 }
+
+void UAABlueprintPlacingComponent::SetHologramState(EHologramMaterialState NewState)
+{
+    for(const auto& [CopyId, CopyPreview] : this->Preview)
+    {
+        for(const auto& [_, Hologram] : CopyPreview.Holograms)
+        {
+            Hologram->SetPlacementMaterialState(NewState);
+        }
+    }
+}

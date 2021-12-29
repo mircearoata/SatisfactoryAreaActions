@@ -20,6 +20,7 @@ public:
 	virtual void OnCancel_Implementation() override;
 
 	void PrimaryFire();
+	void OpenMenu();
 	void ScrollUp();
 	void ScrollDown();
 
@@ -41,17 +42,20 @@ public:
 	void SetDeltaFromAnchorTransform(FTransform HologramTransform);
 
 	UFUNCTION(BlueprintCallable)
-	void PathSelected(const FString BlueprintPath);
-
-	UFUNCTION(BlueprintImplementableEvent)
-	void ShowPlaceBlueprintWidget();
+	bool SetPath(const FString BlueprintPath);
 	
 	UFUNCTION(BlueprintCallable)
 	void Preview();
 	
 	UFUNCTION(BlueprintCallable)
-	bool Finish(const TArray<UFGInventoryComponent*>& Inventories, TArray<FInventoryStack>& MissingItems);
+	bool Finish();
 
+	UFUNCTION(BlueprintPure)
+	bool CanFinish() const;
+	
+	UFUNCTION(BlueprintImplementableEvent, BlueprintPure)
+	TArray<UFGInventoryComponent*> GetInventories() const;
+	
 	UFUNCTION()
 	void RemoveMissingItemsWidget();
 

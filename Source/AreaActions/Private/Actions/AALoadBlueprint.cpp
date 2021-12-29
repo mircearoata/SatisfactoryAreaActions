@@ -44,6 +44,7 @@ void AAALoadBlueprint::Tick(float DeltaSeconds)
 		}
 		Preview();
 	}
+	BlueprintPlacingComponent->SetHologramState(CanFinish() ? EHologramMaterialState::HMS_OK : EHologramMaterialState::HMS_ERROR);
 }
 
 void AAALoadBlueprint::EnableInput(APlayerController* PlayerController)
@@ -51,7 +52,8 @@ void AAALoadBlueprint::EnableInput(APlayerController* PlayerController)
 	Super::EnableInput(PlayerController);
 	
 	InputComponent->BindAction("PrimaryFire", EInputEvent::IE_Pressed, this, &AAALoadBlueprint::PrimaryFire);
-	InputComponent->BindAction("SecondaryFire", EInputEvent::IE_Pressed, this, &AAALoadBlueprint::PrimaryFire);
+	InputComponent->BindAction("SecondaryFire", EInputEvent::IE_Pressed, this, &AAALoadBlueprint::OpenMenu);
+	InputComponent->BindAction("AreaActions.PickAnchor", EInputEvent::IE_Pressed, this, &AAALoadBlueprint::EnterPickAnchor);
 	ScrollUpInputActionBinding = &InputComponent->BindAction("BuildGunScrollUp_PhotoModeFOVUp", EInputEvent::IE_Pressed, this, &AAALoadBlueprint::ScrollUp);
 	ScrollDownInputActionBinding = &InputComponent->BindAction("BuildGunScrollDown_PhotoModeFOVDown", EInputEvent::IE_Pressed, this, &AAALoadBlueprint::ScrollDown);
 	ScrollUpInputActionBinding->bConsumeInput = false;
@@ -74,14 +76,27 @@ void AAALoadBlueprint::PrimaryFire()
 		{
 			AnchorIdx = INDEX_NONE;
 		}
+		EnterPlacing();
 	}
 	else if(bIsPlacing)
 	{
-		bIsPlacing = false;
-		ScrollUpInputActionBinding->bConsumeInput = false;
-		ScrollDownInputActionBinding->bConsumeInput = false;
+		if(Finish())
+		{
+			bIsPlacing = false;
+			ScrollUpInputActionBinding->bConsumeInput = false;
+			ScrollDownInputActionBinding->bConsumeInput = false;
+			Done();
+		}
 	}
-	AreaActionsComponent->ToggleBuildMenu();
+}
+
+void AAALoadBlueprint::OpenMenu()
+{
+	bIsPickingAnchor = false;
+	bIsPlacing = false;
+	ScrollUpInputActionBinding->bConsumeInput = false;
+	ScrollDownInputActionBinding->bConsumeInput = false;
+	AreaActionsComponent->ShowBuildMenu();
 }
 
 void AAALoadBlueprint::ScrollUp()
@@ -120,18 +135,14 @@ void AAALoadBlueprint::SetDeltaFromAnchorTransform(FTransform HologramTransform)
 	DeltaRotation = FRotator(FGenericPlatformMath::RoundToInt(DeltaRotation.Pitch), FGenericPlatformMath::RoundToInt(DeltaRotation.Yaw), FGenericPlatformMath::RoundToInt(DeltaRotation.Roll));
 }
 
-void AAALoadBlueprint::PathSelected(const FString BlueprintPath)
+bool AAALoadBlueprint::SetPath(const FString BlueprintPath)
 {
 	Blueprint = GetGameInstance()->GetSubsystem<UAABlueprintSystem>()->LoadBlueprint(BlueprintPath);
 	if (!Blueprint) {
-		// Error handling
-		this->Done();
+		return false;
 	}
-	else {
-		this->BlueprintPlacingComponent->SetBlueprint(Blueprint);
-		this->BlueprintPlacingComponent->AddCopy(FVector::ZeroVector, FRotator::ZeroRotator);
-		this->ShowPlaceBlueprintWidget();
-	}
+	this->BlueprintPlacingComponent->SetBlueprint(Blueprint);
+	return true;
 }
 
 void AAALoadBlueprint::OnCancel_Implementation()
@@ -144,12 +155,20 @@ void AAALoadBlueprint::Preview()
 	this->BlueprintPlacingComponent->MoveCopy(0, DeltaPosition, DeltaRotation, AnchorIdx != INDEX_NONE ? Blueprint->GetObjectTOC()[AnchorIdx].Transform.GetLocation() : BlueprintPlacingComponent->GetBuildingsCenter());
 }
 
-bool AAALoadBlueprint::Finish(const TArray<UFGInventoryComponent*>& Inventories, TArray<FInventoryStack>& MissingItems)
+bool AAALoadBlueprint::Finish()
 {
-	// TODO Make this whole action be like Copy. Also probably shouldn't be an action
+	if(!CanFinish())
+		return false;
 	this->Preview();
 	TMap<TSubclassOf<UFGItemDescriptor>, int32> MissingItemsMap;
-	return this->BlueprintPlacingComponent->Finish(Inventories, MissingItemsMap);
+	const bool ReturnValue = this->BlueprintPlacingComponent->Finish(GetInventories(), MissingItemsMap);
+	return ReturnValue; 
+}
+
+bool AAALoadBlueprint::CanFinish() const
+{
+	TMap<TSubclassOf<UFGItemDescriptor>, int32> MissingItemsMap;
+	return UAABlueprintFunctionLibrary::InventoriesHaveEnoughItems(GetInventories(), BlueprintPlacingComponent->GetRequiredItems(), MissingItemsMap);
 }
 
 void AAALoadBlueprint::RemoveMissingItemsWidget()
@@ -159,8 +178,11 @@ void AAALoadBlueprint::RemoveMissingItemsWidget()
 
 void AAALoadBlueprint::EnterPickAnchor()
 {
+	ScrollUpInputActionBinding->bConsumeInput = false;
+	ScrollDownInputActionBinding->bConsumeInput = false;
+	bIsPlacing = false;
 	bIsPickingAnchor = true;
-	AreaActionsComponent->ToggleBuildMenu();
+	AreaActionsComponent->HideBuildMenu();
 }
 
 void AAALoadBlueprint::EnterPlacing()
@@ -168,5 +190,6 @@ void AAALoadBlueprint::EnterPlacing()
 	ScrollUpInputActionBinding->bConsumeInput = true;
 	ScrollDownInputActionBinding->bConsumeInput = true;
 	bIsPlacing = true;
-	AreaActionsComponent->ToggleBuildMenu();
+	bIsPickingAnchor = false;
+	AreaActionsComponent->HideBuildMenu();
 }

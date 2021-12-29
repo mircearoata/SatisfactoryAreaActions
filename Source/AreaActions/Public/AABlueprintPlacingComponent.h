@@ -103,13 +103,21 @@ public:
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE FAARotatedBoundingBox GetBounds() const { return Blueprint->GetBoundingBox(); }
 
+
+	UFUNCTION(BlueprintCallable)
 	int AddCopy(FVector Offset, FRotator Rotation, FVector RotationCenter, bool Relative = true);
 	FORCEINLINE int AddCopy(const FVector Offset, const FRotator Rotation, const bool Relative = true) { return this->AddCopy(Offset, Rotation, GetBuildingsCenter(), Relative); }
+
+	UFUNCTION(BlueprintCallable)
 	void MoveCopy(int CopyId, FVector Offset, FRotator Rotation, FVector RotationCenter, bool Relative = true);
 	FORCEINLINE void MoveCopy(const int CopyId, const FVector Offset, const FRotator Rotation, const bool Relative = true) { this->MoveCopy(CopyId, Offset, Rotation, GetBuildingsCenter(), Relative); }
+
+	UFUNCTION(BlueprintCallable)
 	void RemoveCopy(int CopyId);
 
-	bool Finish(TArray<UFGInventoryComponent*> Inventories, TMap<TSubclassOf<UFGItemDescriptor>, int32>& OutMissingItems);
+
+	UFUNCTION(BlueprintCallable)
+	bool Finish(const TArray<UFGInventoryComponent*> Inventories, TMap<TSubclassOf<UFGItemDescriptor>, int32>& OutMissingItems);
 
 	UFUNCTION(BlueprintCallable)
 	AFGBuildableHologram* GetPreviewHologram(int CopyId, int32 Buildable);
@@ -122,6 +130,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	TMap<TSubclassOf<UFGItemDescriptor>, int32> GetRequiredItems();
+	
+	UFUNCTION(BlueprintCallable)
+	void SetHologramState(EHologramMaterialState NewState);
 
 private:
 	FTransform TransformAroundPoint(FTransform OriginalTransform, FVector Offset, FRotator Rotation, FVector RotationCenter);
