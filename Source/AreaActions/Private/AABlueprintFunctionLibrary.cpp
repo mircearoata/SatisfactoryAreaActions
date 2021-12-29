@@ -7,24 +7,26 @@
 
 FTransform UAABlueprintFunctionLibrary::GetHologramSnap(AFGHologram* Hologram, FHitResult HitResult)
 {
+	EHologramMaterialState PreviousState = Hologram->GetHologramMaterialState();
 	const FTransform PreviousHologramTransform = Hologram->GetActorTransform();
 	if(!Hologram->TrySnapToActor(HitResult)) {
 		Hologram->SetHologramLocationAndRotation(HitResult);
 	}
 	FTransform NewHologramTransform = Hologram->GetActorTransform();
 	Hologram->SetActorTransform(PreviousHologramTransform);
-	Hologram->SetPlacementMaterialState(EHologramMaterialState::HMS_OK);
+	Hologram->SetPlacementMaterialState(PreviousState);
 	Hologram->SetActorHiddenInGame(false);
 	return NewHologramTransform;
 }
 
 FTransform UAABlueprintFunctionLibrary::GetHologramScroll(AFGHologram* Hologram, const int32 Delta)
 {
+	EHologramMaterialState PreviousState = Hologram->GetHologramMaterialState();
 	const FTransform PreviousHologramTransform = Hologram->GetActorTransform();
 	Hologram->Scroll(Delta);
 	FTransform NewHologramTransform = Hologram->GetActorTransform();
 	Hologram->SetActorTransform(PreviousHologramTransform);
-	Hologram->SetPlacementMaterialState(EHologramMaterialState::HMS_OK);
+	Hologram->SetPlacementMaterialState(PreviousState);
 	Hologram->SetActorHiddenInGame(false);
 	return NewHologramTransform;
 }

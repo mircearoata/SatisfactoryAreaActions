@@ -398,3 +398,14 @@ TMap<TSubclassOf<UFGItemDescriptor>, int32> UAACopyBuildingsComponent::GetRequir
     
     return TotalItems;
 }
+
+void UAACopyBuildingsComponent::SetHologramState(EHologramMaterialState NewState)
+{
+    for(const auto& [CopyId, CopyPreview] : this->Preview)
+    {
+        for(const auto& [_, Hologram] : CopyPreview.Holograms)
+        {
+            Hologram->SetPlacementMaterialState(NewState);
+        }
+    }
+}

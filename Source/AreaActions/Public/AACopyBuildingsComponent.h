@@ -127,6 +127,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	TMap<TSubclassOf<UFGItemDescriptor>, int32> GetRequiredItems();
 
+	UFUNCTION(BlueprintCallable)
+	void SetHologramState(EHologramMaterialState NewState);
+
 private:
 	bool ValidateObjects(TArray<AFGBuildable*>& OutBuildingsWithIssues);
 	

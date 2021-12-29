@@ -48,6 +48,7 @@ void AAAFill::Tick(float DeltaSeconds)
 		}
 		Preview();
 	}
+	CopyBuildingsComponent->SetHologramState(CanFinish() ? EHologramMaterialState::HMS_OK : EHologramMaterialState::HMS_ERROR);
 }
 
 void AAAFill::EnableInput(APlayerController* PlayerController)
@@ -55,8 +56,7 @@ void AAAFill::EnableInput(APlayerController* PlayerController)
 	Super::EnableInput(PlayerController);
 	
 	InputComponent->BindAction("PrimaryFire", EInputEvent::IE_Pressed, this, &AAAFill::PrimaryFire);
-	InputComponent->BindAction("SecondaryFire", EInputEvent::IE_Pressed, this, &AAAFill::PrimaryFire);
-	InputComponent->BindAction("Inventory", EInputEvent::IE_Pressed, this, &AAAFill::OpenMenu); // TODO Temporary
+	InputComponent->BindAction("SecondaryFire", EInputEvent::IE_Pressed, this, &AAAFill::OpenMenu);
 	ScrollUpInputActionBinding = &InputComponent->BindAction("BuildGunScrollUp_PhotoModeFOVUp", EInputEvent::IE_Pressed, this, &AAAFill::ScrollUp);
 	ScrollDownInputActionBinding = &InputComponent->BindAction("BuildGunScrollDown_PhotoModeFOVDown", EInputEvent::IE_Pressed, this, &AAAFill::ScrollDown);
 	ScrollUpInputActionBinding->bConsumeInput = false;

@@ -42,6 +42,7 @@ void AAACopy::Tick(float DeltaSeconds)
 		}
 		Preview();
 	}
+	CopyBuildingsComponent->SetHologramState(CanFinish() ? EHologramMaterialState::HMS_OK : EHologramMaterialState::HMS_ERROR);
 }
 
 void AAACopy::EnableInput(APlayerController* PlayerController)
@@ -49,8 +50,8 @@ void AAACopy::EnableInput(APlayerController* PlayerController)
 	Super::EnableInput(PlayerController);
 
 	InputComponent->BindAction("PrimaryFire", EInputEvent::IE_Pressed, this, &AAACopy::PrimaryFire);
-	InputComponent->BindAction("SecondaryFire", EInputEvent::IE_Pressed, this, &AAACopy::PrimaryFire);
-	InputComponent->BindAction("Inventory", EInputEvent::IE_Pressed, this, &AAACopy::OpenMenu); // TODO Temporary
+	InputComponent->BindAction("SecondaryFire", EInputEvent::IE_Pressed, this, &AAACopy::OpenMenu);
+	InputComponent->BindAction("AreaActions.PickAnchor", EInputEvent::IE_Pressed, this, &AAACopy::EnterPickAnchor);
 	ScrollUpInputActionBinding = &InputComponent->BindAction("BuildGunScrollUp_PhotoModeFOVUp", EInputEvent::IE_Pressed, this, &AAACopy::ScrollUp);
 	ScrollDownInputActionBinding = &InputComponent->BindAction("BuildGunScrollDown_PhotoModeFOVDown", EInputEvent::IE_Pressed, this, &AAACopy::ScrollDown);
 	ScrollUpInputActionBinding->bConsumeInput = false;
@@ -80,7 +81,7 @@ void AAACopy::PrimaryFire()
 		{
 			Anchor = nullptr;
 		}
-		bIsPlacing = true;
+		EnterPlacing();
 	}
 	else if(bIsPlacing)
 	{
@@ -172,6 +173,9 @@ void AAACopy::RemoveMissingItemsWidget()
 
 void AAACopy::EnterPickAnchor()
 {
+	ScrollUpInputActionBinding->bConsumeInput = false;
+	ScrollDownInputActionBinding->bConsumeInput = false;
+	bIsPlacing = false;
 	bIsPickingAnchor = true;
 	AreaActionsComponent->HideBuildMenu();
 }
@@ -181,5 +185,6 @@ void AAACopy::EnterPlacing()
 	ScrollUpInputActionBinding->bConsumeInput = true;
 	ScrollDownInputActionBinding->bConsumeInput = true;
 	bIsPlacing = true;
+	bIsPickingAnchor = false;
 	AreaActionsComponent->HideBuildMenu();
 }

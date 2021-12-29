@@ -13,7 +13,7 @@ enum EAASelectionMode {
 	SM_MAX UMETA(Hidden)
 };
 
-UCLASS()
+UCLASS(Blueprintable)
 class AREAACTIONS_API AAASelectionActor : public AInfo
 {
 	GENERATED_BODY()
