@@ -280,7 +280,8 @@ bool UAACopyBuildingsComponent::Finish(const TArray<UFGInventoryComponent*> Inve
     if(this->CopyLocations.Num() == 0)
         return true;
 
-    if(!UAABlueprintFunctionLibrary::TakeItemsFromInventories(Inventories, GetRequiredItems(), OutMissingItems))
+    const bool UseBuildCosts = !static_cast<AFGGameState*>(GetWorld()->GetGameState())->GetCheatNoCost();
+    if(UseBuildCosts && !UAABlueprintFunctionLibrary::TakeItemsFromInventories(Inventories, GetRequiredItems(), OutMissingItems))
         return false;
 
     for(const auto& [CopyId, CopyLocation] : this->CopyLocations)
@@ -362,19 +363,15 @@ void UAACopyBuildingsComponent::GetBuildingHolograms(const int CopyId, TMap<AFGB
 
 TMap<TSubclassOf<UFGItemDescriptor>, int32> UAACopyBuildingsComponent::GetRequiredItems()
 {
-    const bool UseBuildCosts = !static_cast<AFGGameState*>(GetWorld()->GetGameState())->GetCheatNoCost();
     TMap<TSubclassOf<UFGItemDescriptor>, int32> ItemsPerCopy;
     for(UObject* Object : this->Original)
     {
         if(AFGBuildable* Buildable = Cast<AFGBuildable>(Object))
         {
             {
-                if(UseBuildCosts)
-                {
-                    TArray<FItemAmount> BuildingIngredients = UFGRecipe::GetIngredients(Buildable->GetBuiltWithRecipe());
-                    for(const FItemAmount ItemAmount : BuildingIngredients)
-                        ItemsPerCopy.FindOrAdd(ItemAmount.ItemClass) += ItemAmount.Amount;
-                }
+                TArray<FItemAmount> BuildingIngredients = UFGRecipe::GetIngredients(Buildable->GetBuiltWithRecipe());
+                for(const FItemAmount ItemAmount : BuildingIngredients)
+                    ItemsPerCopy.FindOrAdd(ItemAmount.ItemClass) += ItemAmount.Amount;
             }
             {
                 if(AFGBuildableFactory* FactoryBuildable = Cast<AFGBuildableFactory>(Buildable))

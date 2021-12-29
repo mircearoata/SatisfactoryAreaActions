@@ -190,7 +190,8 @@ bool UAABlueprintPlacingComponent::Finish(TArray<UFGInventoryComponent*> Invento
     if(this->CopyLocations.Num() == 0)
         return true;
 
-    if(!UAABlueprintFunctionLibrary::TakeItemsFromInventories(Inventories, GetRequiredItems(), OutMissingItems))
+    const bool UseBuildCosts = !static_cast<AFGGameState*>(GetWorld()->GetGameState())->GetCheatNoCost();
+    if(UseBuildCosts && !UAABlueprintFunctionLibrary::TakeItemsFromInventories(Inventories, GetRequiredItems(), OutMissingItems))
         return false;
 
     for(const auto& [CopyId, CopyLocation] : this->CopyLocations)
@@ -282,11 +283,8 @@ int32 UAABlueprintPlacingComponent::GetHologramObjectIdx(AFGBuildableHologram* H
 
 TMap<TSubclassOf<UFGItemDescriptor>, int32> UAABlueprintPlacingComponent::GetRequiredItems()
 {
-    const bool UseBuildCosts = !static_cast<AFGGameState*>(GetWorld()->GetGameState())->GetCheatNoCost();
-
     TMap<TSubclassOf<UFGItemDescriptor>, int32> ItemsPerCopy;
-    if(UseBuildCosts)
-        ItemsPerCopy.Append(Blueprint->GetBuildCosts());
+    ItemsPerCopy.Append(Blueprint->GetBuildCosts());
     ItemsPerCopy.Append(Blueprint->GetOtherItems());
     
     TMap<TSubclassOf<UFGItemDescriptor>, int32> TotalItems;

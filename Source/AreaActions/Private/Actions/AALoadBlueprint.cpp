@@ -5,10 +5,9 @@
 #include "AABlueprintSystem.h"
 #include "AAAreaActionsComponent.h"
 #include "FGCharacterPlayer.h"
-#include "FGInventoryComponent.h"
 #include "FGPlayerController.h"
-#include "Buildables/FGBuildableStorage.h"
 #include "Hologram/FGBuildableHologram.h"
+#include "FGGameState.h"
 
 AAALoadBlueprint::AAALoadBlueprint() {
 	this->BlueprintPlacingComponent = CreateDefaultSubobject<UAABlueprintPlacingComponent>(TEXT("BlueprintPlacing"));
@@ -21,6 +20,7 @@ AAALoadBlueprint::AAALoadBlueprint() {
 
 void AAALoadBlueprint::Tick(float DeltaSeconds)
 {
+	Super::Tick(DeltaSeconds);
 	if(bIsPlacing)
 	{
 		TArray<AFGBuildableHologram*> Holograms;
@@ -167,6 +167,9 @@ bool AAALoadBlueprint::Finish()
 
 bool AAALoadBlueprint::CanFinish() const
 {
+    const bool UseBuildCosts = !static_cast<AFGGameState*>(GetWorld()->GetGameState())->GetCheatNoCost();
+	if(!UseBuildCosts)
+		return true;
 	TMap<TSubclassOf<UFGItemDescriptor>, int32> MissingItemsMap;
 	return UAABlueprintFunctionLibrary::InventoriesHaveEnoughItems(GetInventories(), BlueprintPlacingComponent->GetRequiredItems(), MissingItemsMap);
 }

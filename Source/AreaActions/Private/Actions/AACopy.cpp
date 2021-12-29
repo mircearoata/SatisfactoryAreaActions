@@ -6,7 +6,7 @@
 #include "AAAreaActionsComponent.h"
 #include "FGOutlineComponent.h"
 #include "FGPlayerController.h"
-#include "Buildables/FGBuildableStorage.h"
+#include "FGGameState.h"
 
 AAACopy::AAACopy(): Super() {	
 	this->CopyBuildingsComponent = CreateDefaultSubobject<UAACopyBuildingsComponent>(TEXT("CopyBuildings"));
@@ -19,6 +19,7 @@ AAACopy::AAACopy(): Super() {
 
 void AAACopy::Tick(float DeltaSeconds)
 {
+	Super::Tick(DeltaSeconds);
 	if(bIsPlacing)
 	{
 		TArray<AFGBuildableHologram*> Holograms;
@@ -162,6 +163,9 @@ bool AAACopy::Finish()
 
 bool AAACopy::CanFinish() const
 {
+	const bool UseBuildCosts = !static_cast<AFGGameState*>(GetWorld()->GetGameState())->GetCheatNoCost();
+	if(!UseBuildCosts)
+		return true;
 	TMap<TSubclassOf<UFGItemDescriptor>, int32> MissingItemsMap;
 	return UAABlueprintFunctionLibrary::InventoriesHaveEnoughItems(GetInventories(), CopyBuildingsComponent->GetRequiredItems(), MissingItemsMap);
 }
