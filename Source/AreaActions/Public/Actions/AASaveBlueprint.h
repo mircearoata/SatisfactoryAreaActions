@@ -14,13 +14,14 @@ class AREAACTIONS_API AAASaveBlueprint : public AAAAction
 public:
 	AAASaveBlueprint();
 	
-	virtual void Run_Implementation() override;
-
-	UFUNCTION(BlueprintImplementableEvent)
-	void ShowSelectBlueprintWidget();
+	UFUNCTION(BlueprintCallable)
+	bool CreateBlueprintObject(TArray<AActor*>& ActorsWithIssues);
 
 	UFUNCTION(BlueprintCallable)
-	void NameSelected(const FString BlueprintName);
+	void CaptureIcon();
+	
+	UFUNCTION(BlueprintCallable)
+	void SaveBlueprint(const FString BlueprintName);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	USceneCaptureComponent2D* SceneCaptureComponent;
