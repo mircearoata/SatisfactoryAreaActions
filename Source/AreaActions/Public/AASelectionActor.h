@@ -5,7 +5,7 @@
 #include "AASelectionActor.generated.h"
 
 UENUM(BlueprintType)
-enum EAASelectionMode {
+enum class EAASelectionMode : uint8 {
 	SM_Corner UMETA(DisplayName="Corner"),
 	SM_Bottom UMETA(DisplayName="Bottom"),
 	SM_Top UMETA(DisplayName="Top"),

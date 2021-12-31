@@ -5,6 +5,7 @@
 #include "AAHeightIndicator.h"
 #include "AAAction.h"
 #include "CoreMinimal.h"
+#include "AASelectionActor.h"
 #include "FGPlayerController.h"
 #include "Equipment/FGBuildGun.h"
 
@@ -41,6 +42,12 @@ public:
 	void UpdateHeight();
 
 	UFUNCTION(BlueprintCallable)
+	void EnterSelectionMode(EAASelectionMode Mode, TSubclassOf<AAASelectionActor> SelectionActorClass);
+
+	UFUNCTION(BlueprintCallable)
+	void ExitSelectionMode();
+
+	UFUNCTION(BlueprintCallable)
 	void SelectMap();
 
 	UFUNCTION(BlueprintCallable)
@@ -65,6 +72,9 @@ public:
 	UPROPERTY(BlueprintReadWrite)
 	class AAASelectionActor* SelectionActor;
 
+	UFUNCTION(BlueprintCallable)
+	bool IsMenuVisible();
+	
 	UFUNCTION(BlueprintCallable)
 	void ToggleBuildMenu();
 
@@ -110,6 +120,8 @@ private:
 
 	UPROPERTY()
 	AAAHeightIndicator* BottomIndicator;
+	
+	bool MenuVisibleBeforeAction;
 	
 	friend class AAASelectionActor;
 public:

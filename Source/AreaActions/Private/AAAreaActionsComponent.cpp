@@ -136,6 +136,25 @@ void UAAAreaActionsComponent::UpdateHeight() {
 	this->TopIndicator->SetActorHiddenInGame(this->AreaMaxZ == MaxZ);
 }
 
+void UAAAreaActionsComponent::EnterSelectionMode(EAASelectionMode Mode, TSubclassOf<AAASelectionActor> SelectionActorClass)
+{
+	ExitSelectionMode();
+	SelectionActor = GetWorld()->SpawnActor<AAASelectionActor>(SelectionActorClass, FVector::ZeroVector, FRotator::ZeroRotator);
+	SelectionActor->SetSelectionMode(Mode);
+	SelectionActor->SetAreaActionsComponent(this);
+	SelectionActor->EnableInput(GetPlayerController());
+	HideBuildMenu();
+}
+
+void UAAAreaActionsComponent::ExitSelectionMode()
+{
+	if(SelectionActor)
+	{
+		SelectionActor->Destroy();
+		SelectionActor = nullptr;
+	}
+}
+
 AAAWallIndicator* UAAAreaActionsComponent::CreateWallIndicator(const FVector2D From, const FVector2D To) const
 {
 	const FVector2D Middle = (From + To) / 2;
@@ -302,6 +321,7 @@ bool UAAAreaActionsComponent::RunAction(const TSubclassOf<AAAAction> ActionClass
 	FRotator Rotation;
 	GetMostCommonRotation(ActorsInArea, Rotation);
 
+	MenuVisibleBeforeAction = IsMenuVisible();
 	this->CurrentAction = GetWorld()->SpawnActor<AAAAction>(ActionClass, Middle, Rotation);
 	this->CurrentAction->SetAreaActionsComponent(this);
 	this->CurrentAction->EnableInput(GetPlayerController());
@@ -313,7 +333,9 @@ bool UAAAreaActionsComponent::RunAction(const TSubclassOf<AAAAction> ActionClass
 void UAAAreaActionsComponent::ActionDone() {
 	this->CurrentAction->Destroy();
 	this->CurrentAction = nullptr;
-	this->ShowBuildMenu();
+	
+	if(MenuVisibleBeforeAction)
+		this->ShowBuildMenu();
 }
 
 bool IsPointInPolygon(const FVector2D Point, TArray<FVector2D>& Polygon) {
@@ -355,13 +377,18 @@ void UAAAreaActionsComponent::GetAllActorsInArea(TArray<AActor*>& OutActors) {
 	}
 }
 
-void UAAAreaActionsComponent::ToggleBuildMenu()
+bool UAAAreaActionsComponent::IsMenuVisible()
 {
 	UFGBuildGunState* MenuState = GetPlayerCharacter()->GetBuildGun()->GetBuildGunStateFor(EBuildGunState::BGS_MENU);
-	if(MenuState->IsActive())
-		MenuState->EndState();
+	return MenuState->IsActive();
+}
+
+void UAAAreaActionsComponent::ToggleBuildMenu()
+{
+	if(IsMenuVisible())
+		HideBuildMenu();
 	else
-		MenuState->BeginState();
+		ShowBuildMenu();
 }
 
 void UAAAreaActionsComponent::HideBuildMenu()
@@ -373,6 +400,10 @@ void UAAAreaActionsComponent::HideBuildMenu()
 
 void UAAAreaActionsComponent::ShowBuildMenu()
 {
+	if(!GetPlayerCharacter()->GetBuildGun()->GetInstigator())
+		GetPlayerCharacter()->ToggleBuildGun();
+	if(GetPlayerCharacter()->GetBuildGun()->mCurrentStateEnum != EBuildGunState::BGS_MENU)
+		GetPlayerCharacter()->GetBuildGun()->GotoMenuState();
 	UFGBuildGunState* MenuState = GetPlayerCharacter()->GetBuildGun()->GetBuildGunStateFor(EBuildGunState::BGS_MENU);
 	if(!MenuState->IsActive())
 		MenuState->BeginState();
