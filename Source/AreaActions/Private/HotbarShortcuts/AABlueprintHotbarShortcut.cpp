@@ -5,6 +5,7 @@
 
 #include "AABlueprintFunctionLibrary.h"
 #include "AAAreaActionsComponent.h"
+#include "AABlueprintSystem.h"
 #include "FGPlayerController.h"
 #include "Actions/AALoadBlueprint.h"
 
@@ -32,7 +33,7 @@ bool UAABlueprintHotbarShortcut::IsValidShortcut_Implementation(AFGPlayerControl
 
 UTexture2D* UAABlueprintHotbarShortcut::GetDisplayImage_Implementation() const
 {
-	return nullptr; // TODO
+	return UAABlueprintSystem::GetBlueprintIcon(mBlueprintHeaderToActivate);
 }
 
 bool UAABlueprintHotbarShortcut::IsActive_Implementation(AFGPlayerController* Owner) const

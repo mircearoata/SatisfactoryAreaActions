@@ -30,34 +30,34 @@ void UAABlueprintSystem::DiscoverBlueprints()
 		FAABlueprintHeader Header;
 		MemoryReaderProxy << Header;
 		if(!MemoryReaderProxy.IsError())
-			CachedBlueprints.Add(FileName, Header);
+			CachedBlueprints.Add(FileName.LeftChop(5), Header);
 	}
 }
 
-bool UAABlueprintSystem::SaveBlueprintInternal(const FString FilePath, UAABlueprint* Blueprint) const
+bool UAABlueprintSystem::SaveBlueprintInternal(const FString BlueprintName, UAABlueprint* Blueprint) const
 {
 	TArray<uint8> FileRaw;
 	FMemoryWriter MemoryWriter(FileRaw);
 	FObjectAndNameAsStringProxyArchive MemoryWriterProxy(MemoryWriter, true);
 	Blueprint->SerializeBlueprint(MemoryWriterProxy);
-	return !MemoryWriter.IsError() && FFileHelper::SaveArrayToFile(FileRaw, *FilePath);
+	return !MemoryWriter.IsError() && FFileHelper::SaveArrayToFile(FileRaw, *GetBlueprintPath(BlueprintName));
 }
 
-bool UAABlueprintSystem::SaveBlueprint(const FString FilePath, UAABlueprint* Blueprint)
+bool UAABlueprintSystem::SaveBlueprint(const FString BlueprintName, UAABlueprint* Blueprint)
 {
-	const bool Result = SaveBlueprintInternal(FilePath, Blueprint);
+	const bool Result = SaveBlueprintInternal(BlueprintName, Blueprint);
 	if(Result)
 	{
-		CachedBlueprints.Add(FilePath, Blueprint->BlueprintHeader);
+		CachedBlueprints.Add(BlueprintName, Blueprint->BlueprintHeader);
 	}
 	return Result;
 }
 
-UAABlueprint* UAABlueprintSystem::LoadBlueprint(const FString FileName)
+UAABlueprint* UAABlueprintSystem::LoadBlueprint(const FString BlueprintName)
 {
 	UAABlueprint* Blueprint = NewObject<UAABlueprint>(this);
 	TArray<uint8> FileRaw;
-	if (!FFileHelper::LoadFileToArray(FileRaw, *(GetBlueprintsDir() / FileName)))
+	if (!FFileHelper::LoadFileToArray(FileRaw, *GetBlueprintPath(BlueprintName)))
 		return nullptr;
 	FMemoryReader MemoryReader(FileRaw);
 	FObjectAndNameAsStringProxyArchive MemoryReaderProxy(MemoryReader, true);

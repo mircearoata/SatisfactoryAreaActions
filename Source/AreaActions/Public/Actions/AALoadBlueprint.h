@@ -45,7 +45,7 @@ public:
 	void SetDeltaFromAnchorTransform(FTransform HologramTransform);
 
 	UFUNCTION(BlueprintCallable)
-	bool SetPath(const FString InBlueprintFileName);
+	bool SetPath(const FString InBlueprintName);
 	
 	UFUNCTION(BlueprintCallable)
 	void Preview();

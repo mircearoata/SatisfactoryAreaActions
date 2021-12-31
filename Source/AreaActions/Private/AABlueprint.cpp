@@ -10,6 +10,7 @@
 #include "AASerializationHelpers.h"
 #include "FGSaveInterface.h"
 #include "FGSaveSession.h"
+#include "ImageUtils.h"
 #include "Buildables/FGBuildable.h"
 #include "Buildables/FGBuildableFactory.h"
 #include "Components/SplineMeshComponent.h"
@@ -34,6 +35,22 @@ FArchive& operator<< (FArchive& Ar, FAABlueprintHeader& Header)
 	Ar << Header.BoundingBox;
 	Ar << Header.BuildCosts;
 	Ar << Header.OtherItems;
+	if(HeaderVersion >= HeaderFormatVersion::AddIcon)
+	{
+		if(Ar.IsLoading())
+		{
+			Ar << Header.IconBuffer;
+			Header.Icon = FImageUtils::ImportBufferAsTexture2D(Header.IconBuffer);
+		}
+		else
+		{
+			Ar << Header.IconBuffer;
+		}
+	}
+	else
+	{
+		Header.Icon = nullptr;
+	}
 	return Ar;
 }
 
@@ -98,6 +115,12 @@ UAABlueprint* UAABlueprint::FromRootSet(UObject* WorldContext, TArray<AActor*>& 
 	Blueprint->BlueprintHeader.BoundingBox.Rotation = FRotator::ZeroRotator;
 
 	return Blueprint;
+}
+
+void UAABlueprint::SetIconBuffer(TArray<uint8> InIconBuffer)
+{
+	BlueprintHeader.IconBuffer = InIconBuffer;
+	BlueprintHeader.Icon = FImageUtils::ImportBufferAsTexture2D(InIconBuffer);
 }
 
 void UAABlueprint::SerializeTOC()

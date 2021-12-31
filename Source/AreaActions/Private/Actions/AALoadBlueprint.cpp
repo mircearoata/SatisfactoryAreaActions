@@ -135,10 +135,10 @@ void AAALoadBlueprint::SetDeltaFromAnchorTransform(FTransform HologramTransform)
 	DeltaRotation = FRotator(FGenericPlatformMath::RoundToInt(DeltaRotation.Pitch), FGenericPlatformMath::RoundToInt(DeltaRotation.Yaw), FGenericPlatformMath::RoundToInt(DeltaRotation.Roll));
 }
 
-bool AAALoadBlueprint::SetPath(const FString InBlueprintFileName)
+bool AAALoadBlueprint::SetPath(const FString InBlueprintName)
 {
-	this->BlueprintFileName = InBlueprintFileName;
-	Blueprint = GetGameInstance()->GetSubsystem<UAABlueprintSystem>()->LoadBlueprint(InBlueprintFileName);
+	this->BlueprintFileName = InBlueprintName;
+	Blueprint = GetGameInstance()->GetSubsystem<UAABlueprintSystem>()->LoadBlueprint(InBlueprintName);
 	if (!Blueprint) {
 		return false;
 	}
@@ -168,6 +168,8 @@ bool AAALoadBlueprint::Finish()
 
 bool AAALoadBlueprint::CanFinish() const
 {
+	if(!Blueprint)
+		return false;
     const bool UseBuildCosts = !static_cast<AFGGameState*>(GetWorld()->GetGameState())->GetCheatNoCost();
 	if(!UseBuildCosts)
 		return true;

@@ -79,6 +79,18 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE AFGCharacterPlayer* GetPlayerCharacter() const { return static_cast<AFGCharacterPlayer*>(GetOuterAFGBuildGun()->GetOwner()); }
+	
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE TArray<AAACornerIndicator*> GetCornerIndicators() { return CornerIndicators; }
+	
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE TArray<AAAWallIndicator*> GetWallIndicators() { return WallIndicators; }
+	
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE AAAHeightIndicator* GetTopIndicator() { return TopIndicator; }
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE AAAHeightIndicator* GetBottomIndicator() { return BottomIndicator; }
 private:
 	UPROPERTY()
 	TArray<AActor*> ExtraActors;

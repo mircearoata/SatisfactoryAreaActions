@@ -18,8 +18,11 @@ struct AREAACTIONS_API FAABlueprintHeader
 public:
 	enum class HeaderFormatVersion : uint8
 	{		
-		// First version
+		// 08-09-2021 - First version
 		InitialVersion = 0,
+
+		// 31-12-2021 - Add icon
+		AddIcon,
 		
 		// -----<new versions can be added above this line>-----
 		VersionPlusOne,
@@ -33,7 +36,10 @@ public:
 	FAARotatedBoundingBox BoundingBox;
     TMap<TSubclassOf<UFGItemDescriptor>, int32> BuildCosts;
     TMap<TSubclassOf<UFGItemDescriptor>, int32> OtherItems;
-	
+
+	UPROPERTY()
+	UTexture2D* Icon;
+	TArray<uint8> IconBuffer;
 	
 	/** Store / load data */
 	friend FArchive& operator<< (FArchive& Ar, FAABlueprintHeader& Header);
@@ -102,7 +108,9 @@ public:
 	FORCEINLINE FAARotatedBoundingBox GetBoundingBox() const { return BlueprintHeader.BoundingBox; }
 	FORCEINLINE TMap<TSubclassOf<UFGItemDescriptor>, int32> GetBuildCosts() const { return BlueprintHeader.BuildCosts; }
 	FORCEINLINE TMap<TSubclassOf<UFGItemDescriptor>, int32> GetOtherItems() const { return BlueprintHeader.OtherItems; }
+	FORCEINLINE UTexture2D* GetIcon() const { return BlueprintHeader.Icon; }
 	FORCEINLINE void SetName(const FString BlueprintName) { BlueprintHeader.BlueprintName = BlueprintName; }
+	void SetIconBuffer(TArray<uint8> InIconBuffer);
 
 private:	
 	void SerializeTOC();
@@ -113,6 +121,7 @@ private:
 	friend class UAABlueprintSystem;
 
 protected:
+	UPROPERTY()
 	FAABlueprintHeader BlueprintHeader;
 
 	TArray<FAABlueprintObjectTOC> ObjectTOC;
