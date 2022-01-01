@@ -229,7 +229,7 @@ void UAAAreaActionsComponent::DelayedUpdateExtraActors()
 
 void UAAAreaActionsComponent::OnBuildGunStateChanged(EBuildGunState NewState)
 {
-	if (NewState != EBuildGunState::BGS_MENU)
+	if (NewState != EBuildGunState::BGS_MENU && NewState != EBuildGunState::BGS_NONE)
 	{
 		for(AAACornerIndicator*& Indicator : CornerIndicators)
 			Indicator->Destroy();
@@ -247,7 +247,9 @@ void UAAAreaActionsComponent::OnBuildGunStateChanged(EBuildGunState NewState)
 
 		ExtraActors.Empty();
 		DelayedUpdateExtraActors();
-
+	}
+	if (NewState != EBuildGunState::BGS_MENU)
+	{
 		if (CurrentAction)
 		{
 			CurrentAction->Cancel();

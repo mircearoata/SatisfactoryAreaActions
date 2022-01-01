@@ -18,6 +18,20 @@ void FAreaActionsModule::StartupModule() {
 		AreaActionsComponent->SetIsReplicated(true);
 		Self->AddOwnedComponent(AreaActionsComponent);
 	});
+	SUBSCRIBE_METHOD(AFGCharacterPlayer::UnEquipAllEquipment, [](auto& Scope, AFGCharacterPlayer* Self)
+	{
+		if(Self)
+		{
+			if(AFGBuildGun* BuildGun = Self->GetBuildGun())
+			{
+				if(UAAAreaActionsComponent* Component = BuildGun->FindComponentByClass<UAAAreaActionsComponent>())
+				{
+					BuildGun->RemoveOwnedComponent(Component);
+					Component->DestroyComponent();
+				}
+			}
+		}
+	});
 #endif
 }
 
