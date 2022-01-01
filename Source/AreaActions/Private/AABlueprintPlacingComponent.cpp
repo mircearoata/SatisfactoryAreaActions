@@ -163,6 +163,9 @@ int UAABlueprintPlacingComponent::AddCopy(const FVector Offset, const FRotator R
 
 void UAABlueprintPlacingComponent::MoveCopy(const int CopyId, const FVector Offset, const FRotator Rotation, const FVector RotationCenter, const bool Relative)
 {
+    if(!this->CopyLocations.Contains(CopyId))
+        return;
+    
     FBlueprintPlaceLocation NewLocation = FBlueprintPlaceLocation(Offset, Rotation, RotationCenter, Relative);
     if(this->CopyLocations[CopyId] == NewLocation)
         return;

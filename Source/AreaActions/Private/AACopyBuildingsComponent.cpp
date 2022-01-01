@@ -253,6 +253,8 @@ int UAACopyBuildingsComponent::AddCopy(const FVector Offset, const FRotator Rota
 
 void UAACopyBuildingsComponent::MoveCopy(const int CopyId, const FVector Offset, const FRotator Rotation, const FVector RotationCenter, const bool Relative)
 {
+    if(!this->CopyLocations.Contains(CopyId))
+        return;
     FCopyLocation NewLocation = FCopyLocation(Offset, Rotation, RotationCenter, Relative);
     if(this->CopyLocations[CopyId] == NewLocation)
         return;

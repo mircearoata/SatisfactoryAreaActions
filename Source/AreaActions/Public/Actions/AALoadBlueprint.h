@@ -25,6 +25,9 @@ public:
 	void ScrollDown();
 
 	UFUNCTION(BlueprintCallable)
+	void CreateNewCopy();
+	
+	UFUNCTION(BlueprintCallable)
 	void SetDelta(const FVector InDeltaPosition, const FRotator InDeltaRotation)
 	{
 		this->DeltaPosition = InDeltaPosition;
@@ -71,6 +74,8 @@ public:
 protected:
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
 	UAABlueprintPlacingComponent* BlueprintPlacingComponent;
+
+	int32 CurrentCopy;
 
 	FVector DeltaPosition;
 	FRotator DeltaRotation;

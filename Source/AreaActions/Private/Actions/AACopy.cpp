@@ -30,7 +30,7 @@ void AAACopy::Tick(float DeltaSeconds)
 		{
 			if(Anchor)
 			{
-				if(AFGBuildableHologram* AnchorHologram = CopyBuildingsComponent->GetPreviewHologram(0, Anchor))
+				if(AFGBuildableHologram* AnchorHologram = CopyBuildingsComponent->GetPreviewHologram(CurrentCopy, Anchor))
 				{
 					FTransform Snapped = UAABlueprintFunctionLibrary::GetHologramSnap(AnchorHologram, HitResult);
 					SetDeltaFromAnchorTransform(Snapped);
@@ -66,7 +66,7 @@ void AAACopy::PrimaryFire()
 		bIsPickingAnchor = false;
 		FHitResult HitResult;
 		TMap<AFGBuildable*, AFGBuildableHologram*> PreviewHolograms;
-		CopyBuildingsComponent->GetBuildingHolograms(0, PreviewHolograms);
+		CopyBuildingsComponent->GetBuildingHolograms(CurrentCopy, PreviewHolograms);
 		if(AreaActionsComponent->RaycastMouseWithRange(HitResult, true, true, true))
 		{
 			if(Actors.Contains(HitResult.Actor))
@@ -88,10 +88,7 @@ void AAACopy::PrimaryFire()
 	{
 		if(Finish())
 		{
-			bIsPlacing = false;
-			ScrollUpInputActionBinding->bConsumeInput = false;
-			ScrollDownInputActionBinding->bConsumeInput = false;
-			Done();
+			CreateNewCopy();
 		}
 	}
 }
@@ -109,7 +106,7 @@ void AAACopy::ScrollUp()
 {
 	if(Anchor)
 	{
-		if(AFGBuildableHologram* Hologram = CopyBuildingsComponent->GetPreviewHologram(0, Anchor))
+		if(AFGBuildableHologram* Hologram = CopyBuildingsComponent->GetPreviewHologram(CurrentCopy, Anchor))
 		{
 			FTransform Scrolled = UAABlueprintFunctionLibrary::GetHologramScroll(Hologram, 1);
 			SetDeltaFromAnchorTransform(Scrolled);
@@ -123,7 +120,7 @@ void AAACopy::ScrollDown()
 {
 	if(Anchor)
 	{
-		if(AFGBuildableHologram* Hologram = CopyBuildingsComponent->GetPreviewHologram(0, Anchor))
+		if(AFGBuildableHologram* Hologram = CopyBuildingsComponent->GetPreviewHologram(CurrentCopy, Anchor))
 		{
 			FTransform Scrolled = UAABlueprintFunctionLibrary::GetHologramScroll(Hologram, -1);
 			SetDeltaFromAnchorTransform(Scrolled);
@@ -131,6 +128,11 @@ void AAACopy::ScrollDown()
 		}
 	}
 	DeltaRotation = DeltaRotation.Add(0, -10, 0);
+}
+
+void AAACopy::CreateNewCopy()
+{
+	CurrentCopy = this->CopyBuildingsComponent->AddCopy(FVector::ZeroVector, FRotator::ZeroRotator, CopyBuildingsComponent->GetBuildingsCenter(), true);
 }
 
 void AAACopy::SetDeltaFromAnchorTransform(FTransform HologramTransform)
@@ -143,12 +145,12 @@ void AAACopy::SetDeltaFromAnchorTransform(FTransform HologramTransform)
 
 void AAACopy::OnCancel_Implementation()
 {
-	this->CopyBuildingsComponent->RemoveCopy(0);
+	this->CopyBuildingsComponent->RemoveCopy(CurrentCopy);
 }
 
 void AAACopy::Preview()
 {
-	this->CopyBuildingsComponent->MoveCopy(0, DeltaPosition, DeltaRotation, Anchor ? Anchor->GetActorLocation() : CopyBuildingsComponent->GetBuildingsCenter());
+	this->CopyBuildingsComponent->MoveCopy(CurrentCopy, DeltaPosition, DeltaRotation, Anchor ? Anchor->GetActorLocation() : CopyBuildingsComponent->GetBuildingsCenter());
 }
 
 bool AAACopy::Finish()

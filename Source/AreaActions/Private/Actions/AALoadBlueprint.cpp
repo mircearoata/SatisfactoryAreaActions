@@ -31,7 +31,7 @@ void AAALoadBlueprint::Tick(float DeltaSeconds)
 		{
 			if(AnchorIdx != INDEX_NONE)
 			{
-				if(AFGBuildableHologram* AnchorHologram = BlueprintPlacingComponent->GetPreviewHologram(0, AnchorIdx))
+				if(AFGBuildableHologram* AnchorHologram = BlueprintPlacingComponent->GetPreviewHologram(CurrentCopy, AnchorIdx))
 				{
 					FTransform Snapped = UAABlueprintFunctionLibrary::GetHologramSnap(AnchorHologram, HitResult);
 					SetDeltaFromAnchorTransform(Snapped);
@@ -82,10 +82,7 @@ void AAALoadBlueprint::PrimaryFire()
 	{
 		if(Finish())
 		{
-			bIsPlacing = false;
-			ScrollUpInputActionBinding->bConsumeInput = false;
-			ScrollDownInputActionBinding->bConsumeInput = false;
-			Done();
+			CreateNewCopy();
 		}
 	}
 }
@@ -103,7 +100,7 @@ void AAALoadBlueprint::ScrollUp()
 {
 	if(AnchorIdx != INDEX_NONE)
 	{
-		if(AFGBuildableHologram* Hologram = BlueprintPlacingComponent->GetPreviewHologram(0, AnchorIdx))
+		if(AFGBuildableHologram* Hologram = BlueprintPlacingComponent->GetPreviewHologram(CurrentCopy, AnchorIdx))
 		{
 			FTransform Scrolled = UAABlueprintFunctionLibrary::GetHologramScroll(Hologram, 1);
 			SetDeltaFromAnchorTransform(Scrolled);
@@ -117,7 +114,7 @@ void AAALoadBlueprint::ScrollDown()
 {
 	if(AnchorIdx != INDEX_NONE)
 	{
-		if(AFGBuildableHologram* Hologram = BlueprintPlacingComponent->GetPreviewHologram(0, AnchorIdx))
+		if(AFGBuildableHologram* Hologram = BlueprintPlacingComponent->GetPreviewHologram(CurrentCopy, AnchorIdx))
 		{
 			FTransform Scrolled = UAABlueprintFunctionLibrary::GetHologramScroll(Hologram, -1);
 			SetDeltaFromAnchorTransform(Scrolled);
@@ -125,6 +122,11 @@ void AAALoadBlueprint::ScrollDown()
 		}
 	}
 	DeltaRotation = DeltaRotation.Add(0, -10, 0);
+}
+
+void AAALoadBlueprint::CreateNewCopy()
+{
+	CurrentCopy = this->BlueprintPlacingComponent->AddCopy(FVector::ZeroVector, FRotator::ZeroRotator, BlueprintPlacingComponent->GetBuildingsCenter(), true);
 }
 
 void AAALoadBlueprint::SetDeltaFromAnchorTransform(FTransform HologramTransform)
@@ -148,12 +150,12 @@ bool AAALoadBlueprint::SetPath(const FString InBlueprintName)
 
 void AAALoadBlueprint::OnCancel_Implementation()
 {
-	this->BlueprintPlacingComponent->RemoveCopy(0);
+	this->BlueprintPlacingComponent->RemoveCopy(CurrentCopy);
 }
 
 void AAALoadBlueprint::Preview()
 {
-	this->BlueprintPlacingComponent->MoveCopy(0, DeltaPosition, DeltaRotation, AnchorIdx != INDEX_NONE ? Blueprint->GetObjectTOC()[AnchorIdx].Transform.GetLocation() : BlueprintPlacingComponent->GetBuildingsCenter());
+	this->BlueprintPlacingComponent->MoveCopy(CurrentCopy, DeltaPosition, DeltaRotation, AnchorIdx != INDEX_NONE ? Blueprint->GetObjectTOC()[AnchorIdx].Transform.GetLocation() : BlueprintPlacingComponent->GetBuildingsCenter());
 }
 
 bool AAALoadBlueprint::Finish()
