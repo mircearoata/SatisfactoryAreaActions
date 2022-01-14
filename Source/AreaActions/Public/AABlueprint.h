@@ -34,7 +34,11 @@ public:
 	FString BlueprintName;
 	
 	FAARotatedBoundingBox BoundingBox;
+	
+	UPROPERTY()
     TMap<TSubclassOf<UFGItemDescriptor>, int32> BuildCosts;
+	
+	UPROPERTY()
     TMap<TSubclassOf<UFGItemDescriptor>, int32> OtherItems;
 
 	UPROPERTY()

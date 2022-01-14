@@ -44,6 +44,7 @@ public:
 	static FORCEINLINE TMap<TSubclassOf<UFGItemDescriptor>, int32> GetOtherItems(const FAABlueprintHeader& Header) { return Header.OtherItems; }
 private:
 	bool SaveBlueprintInternal(const FString BlueprintName, UAABlueprint* Blueprint) const;
+
 	UPROPERTY()
 	TMap<FString, FAABlueprintHeader> CachedBlueprints;	
 };
