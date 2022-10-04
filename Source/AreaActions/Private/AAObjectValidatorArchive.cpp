@@ -30,7 +30,7 @@ bool FAAObjectValidatorArchive::IsValid(UObject* Object) const
     {
         if(Actor->GetOwner() == Object) return true;
     }
-    return AllObjects.Contains(Object);
+    return !Object->IsInOuter(CurrentObject) || AllObjects.Contains(Object);
 }
 
 void FAAObjectValidatorArchive::SetInvalid(UObject* InvalidObject)

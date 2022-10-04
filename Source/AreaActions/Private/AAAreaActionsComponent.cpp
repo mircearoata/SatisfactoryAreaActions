@@ -219,7 +219,9 @@ void UAAAreaActionsComponent::RemoveCorner(const int CornerIdx) {
 
 void UAAAreaActionsComponent::UpdateExtraActors() const
 {
-	UFGOutlineComponent::Get(GetWorld())->ShowDismantlePendingMaterial(this->ExtraActors);
+	UFGOutlineComponent* Outline = UFGOutlineComponent::Get(GetWorld());
+	Outline->HideOutline();
+	Outline->ShowDismantlePendingMaterial(this->ExtraActors);
 }
 
 void UAAAreaActionsComponent::DelayedUpdateExtraActors()

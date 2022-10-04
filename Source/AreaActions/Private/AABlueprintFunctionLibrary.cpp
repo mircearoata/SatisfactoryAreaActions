@@ -80,7 +80,8 @@ bool UAABlueprintFunctionLibrary::TakeItemsFromInventories(const TArray<UFGInven
 {
 	if(!InventoriesHaveEnoughItems(Inventories, Items, MissingItems))
 		return false;
-	
+
+	MissingItems = Items;
 	for(UFGInventoryComponent* Inventory : Inventories)
 	{
 		TArray<FInventoryStack> Stacks;
@@ -99,5 +100,5 @@ bool UAABlueprintFunctionLibrary::TakeItemsFromInventories(const TArray<UFGInven
 		}
 	}
 
-	return MissingItems.Num() == 0;
+	return true;
 }

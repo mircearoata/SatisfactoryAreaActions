@@ -162,6 +162,7 @@ void UAABlueprint::SerializeData()
 	FAAObjectReferenceArchive DataAr(DataWriter, ObjectsToSerialize);
 	DataAr.SetIsLoading(false);
 	DataAr.SetIsSaving(true);
+	DataAr.ArNoDelta = true;
     
 	for(UObject* Object : ObjectsToSerialize)
 		Object->Serialize(DataAr);
@@ -197,7 +198,7 @@ FArchive& operator<<(FArchive& Ar, FAABlueprintObjectTOC& BuildingTOC)
 {
 	Ar << BuildingTOC.Class;
 	Ar << BuildingTOC.Name;
-	if(Ar.IsLoading())
+	if(!Ar.IsLoading())
 	{
 		uint32 FlagsInt = static_cast<uint32>(BuildingTOC.Flags);
 		Ar << FlagsInt;
