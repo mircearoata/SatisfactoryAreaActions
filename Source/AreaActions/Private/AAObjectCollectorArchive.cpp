@@ -56,7 +56,7 @@ bool FAAObjectCollectorArchive::ShouldSave(UObject* Object) const
         if(!RootObjects.Contains(Actor->GetOwner())) return false;
     }
     if(Object->HasAnyFlags(RF_WasLoaded)) return false;
-    return true;
+    return Object->IsInOuter(CurrentObject);
 }
 
 FArchive& FAAObjectCollectorArchive::operator<<(UObject*& Value)
@@ -92,4 +92,3 @@ FArchive& FAAObjectCollectorArchive::operator<<(FWeakObjectPtr& Value)
     return *this;
 }
 
-const FGuid FSaveCustomVersion::GUID = FGuid(0x21043E2F, 0x13E61FD6, 0x513B9D51, 0x3636A230); //See symbol ?GUID@FSaveCustomVersion@@2UFGuid@@B in IDA for value <21043E2Fh, 13E61FD6h, 513B9D51h, 3636A230h>

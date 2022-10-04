@@ -97,10 +97,11 @@ TMap<TSubclassOf<UFGItemDescriptor>, int32> FAABuildingsDataHelper::CalculateBui
 	{
 		if(AFGBuildable* Buildable = Cast<AFGBuildable>(Object))
 		{
+			int32 Multiplier = Buildable->GetDismantleRefundReturnsMultiplier(); // For conveyors, pipes, etc
 			{
 				TArray<FItemAmount> BuildingIngredients = UFGRecipe::GetIngredients(Buildable->GetBuiltWithRecipe());
 				for(const FItemAmount ItemAmount : BuildingIngredients)
-					RequiredItems.FindOrAdd(ItemAmount.ItemClass) += ItemAmount.Amount;
+					RequiredItems.FindOrAdd(ItemAmount.ItemClass) += ItemAmount.Amount * Multiplier;
 			}
 		}
 	}
