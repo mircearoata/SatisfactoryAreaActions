@@ -1,8 +1,8 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "1.6.6",
-    "SemVersion": "1.6.6",
+	"VersionName": "1.6.7",
+    "SemVersion": "1.6.7",
 	"FriendlyName": "Area Actions",
 	"Description": "Do stuff that usually takes too long, with just a few clicks",
 	"Category": "Modding",
@@ -18,7 +18,7 @@
     "Plugins": [
         {
             "Name": "SML",
-            "SemVersion": "^3.2.0",
+            "SemVersion": "^3.4.1",
             "Enabled": true
         }
     ]
